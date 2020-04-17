@@ -7,4 +7,4 @@
 ##### [1.1.2.1. Caso práctico](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes.Elastickube./blob/master/Proyecto.md#1111-caso-pr%C3%A1ctico-1)
 ### [1.2. Autorización](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes.Elastickube./blob/master/Proyecto.md#12-autorizaci%C3%B3n)
 ### [1.3. Control de admisión](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes.Elastickube./blob/master/Proyecto.md#13-control-de-admisi%C3%B3n)
-## [Elastickube]
+## 2. Elastickube
