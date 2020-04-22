@@ -54,84 +54,248 @@ Done.
 debian@kubeprueba:~$ sudo useradd -m kubepaloma -G proyecto -s /bin/bash
 ~~~
 
-Desde el nuevo usuario se instala kubectl:
+Se instala kubectl en el nodo cliente y desde el master se dan permiso de lectura al fichero **/etc/kubernetes/admin.conf**:
 ~~~
-kubepaloma@kubeprueba:~$ sudo apt update
-...
-kubepaloma@kubeprueba:~$ sudo apt install apt-transport-https
-...
-kubepaloma@kubeprueba:~$ sudo su
-root@kubeprueba:/home/kubepaloma# curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
-OK
-root@kubeprueba:/home/kubepaloma# curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
-OK
-root@kubeprueba:/home/kubepaloma# cat <<EOF >/etc/apt/sources.list.d/kubernetes.list
-> deb https://apt.kubernetes.io/ kubernetes-xenial main
-> EOF
-kubepaloma@kubeprueba:~$ sudo apt update
-...
-kubepaloma@kubeprueba:~$ sudo apt install kubectl
+debian@kubemaster:~$ sudo chmod 644 /etc/kubernetes/admin.conf
 ~~~
 
-Y se configura el acceso al clúster:
-- Desde el nodo master, hay que dar permiso de lectura al fichero **/etc/kubernetes/admin.conf**
-~~~
-debian@kubemaster:~$ sudo chmod 644 /etc/kubernetes/admin.conf 
-~~~
-
-- Desde el cliente:
+Desde el nodo cliente:
 ~~~
 kubepaloma@kubeprueba:~$ export IP_MASTER=172.22.200.133
 kubepaloma@kubeprueba:~$ sftp debian@${IP_MASTER}
+The authenticity of host '172.22.200.133 (172.22.200.133)' can't be established.
+ECDSA key fingerprint is SHA256:ZfB+qiMtU9/Rf0HJvTWFQqc8FcI+tKBznMdFatKwz/w.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added '172.22.200.133' (ECDSA) to the list of known hosts.
 debian@172.22.200.133's password: 
 Connected to debian@172.22.200.133.
 sftp> get /etc/kubernetes/admin.conf
 Fetching /etc/kubernetes/admin.conf to admin.conf
-/etc/kubernetes/admin.conf                       100% 5448    61.8KB/s   00:00    
+/etc/kubernetes/admin.conf                       100% 5448   511.5KB/s   00:00    
 sftp> exit
-kubepaloma@kubeprueba:~$ mkdir .kube/
+kubepaloma@kubeprueba:~$ mkdir .kube
 kubepaloma@kubeprueba:~$ mv admin.conf ~/.kube/mycluster.conf
 kubepaloma@kubeprueba:~$ sed -i -e "s#server: https://.*:6443#server: https://${IP_MASTER}:6443#g" ~/.kube/mycluster.conf
 kubepaloma@kubeprueba:~$ export KUBECONFIG=~/.kube/mycluster.conf
 ~~~
 
-
-##################################
-######VOY POR AQUI EN LIMPIO######
-##################################
-
-
-
-
-
-
-1. Generación de la clave
+Finalmente se comprueba que funciona correctamente:
 ~~~
-openssl genrsa -out kubeopenssl.key 2048
+kubepaloma@kubeprueba:~$ kubectl cluster-info
+
+Kubernetes master is running at https://172.22.200.133:6443
+KubeDNS is running at https://172.22.200.133:6443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
 ~~~
 
-2. Generación de la petición de firma
+En estos momentos, el nodo cliente funciona como el administrador porque se ha copiado el fichero de configuración sin configurar adecuadamente. El siguiente paso es la creación del usuario y la configuración: 
+
+Se genera la clave y la petición de firma:
 ~~~
-openssl req -new -key kubeopenssl.key -out kubeopenssl.csr -subj "/CN=kubeopenssl/O=developers"
+kubepaloma@kubeprueba:~$ openssl genrsa -out kubepaloma.key 2048
+Generating RSA private key, 2048 bit long modulus (2 primes)
+................................+++++
+........+++++
+e is 65537 (0x010001)
+kubepaloma@kubeprueba:~$ openssl req -new -key kubepaloma.key -out kubepaloma.csr -subj "/CN=kubepaloma/O=proyecto"
 ~~~
 
-3. Creación del certificado
+Se envía la petición de firma al nodo master para que se cree el certificado:
 ~~~
-openssl x509 -req -in kubeopenssl.csr -CA /home/ubuntu/cert/ca.crt -CAkey /home/ubuntu/cert/ca.key -CAcreateserial -out kubeopenssl.crt -days 90
-~~~
-
-4. Creación de los usuarios en el clúster (desde el administrador del clúster)
-~~~
-kubectl config set-credentials kubeopenssl --client-certificate=kubeopenssl.crt --client-key=kubeopenssl.key
+kubepaloma@kubeprueba:~$ scp kubepaloma.csr debian@${IP_MASTER}:
+debian@172.22.200.133's password: 
+kubepaloma.csr                                   100%  920   586.4KB/s   00:00
 ~~~
 
-Para comprobar los usuarios que se han creado:
+Desde el nodo master se firma la petición:
 ~~~
-kubectl config view
+debian@kubemaster:~$ sudo openssl x509 -req -in kubepaloma.csr -CA /etc/kubernetes/pki/ca.crt -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out kubepaloma.crt -days 90
+Signature ok
+subject=CN = kubepaloma, O = proyecto
+Getting CA Private Key
+~~~
+
+A continuación, el cliente obtiene el certificado:
+~~~
+kubepaloma@kubeprueba:~$ sftp debian@${IP_MASTER}
+debian@172.22.200.133's password: 
+Connected to debian@172.22.200.133.
+sftp> get /home/debian/kubepaloma.crt 
+Fetching /home/debian/kubepaloma.crt to kubepaloma.crt
+/home/debian/kubepaloma.crt                      100% 1021   554.5KB/s   00:00    
+sftp> exit
 ~~~
 
 
 ### 1.1.2. Tokens
-#### 1.1.1.1. Caso práctico
+#### 1.1.2.1. Caso práctico
+
 ## 1.2. Autorización
+Creación de usuario en el clúster con autenticación de certificados:
+~~~
+kubectl config set-credentials <nombre_usuario> --client-certificate=<nombre_certificado>.crt --client-key=<nombre_clave>.key
+~~~
+
+Para ejecutar comando con un usuario concreto se utilizan los contextos. Para veer los contextos existentes se utiliza la siguinete orden:
+~~~
+kubectl config get-contexts  
+~~~
+
+Para crear un contexto:
+~~~
+kubectl config set-context <contexto> --cluster=<nombre_cluster> --user=<usuario>
+~~~
+
+Para cambiar el contexto:
+~~~
+kubectl config use-context <contexto>
+~~~
+
+Y para ver el contexto que se está usuando:
+~~~
+kubectl config current-context
+~~~
+
+### 1.2.1. Caso práctico
+Se crea el usuario en el clúster:
+~~~
+kubepaloma@kubeprueba:~$ kubectl config set-credentials kubepaloma --client-certificate=kubepaloma.crt --client-key=kubepaloma.key
+User "kubepaloma" set.
+~~~
+
+Y se comprueba que el usuario se ha creado correctamente:
+~~~
+kubepaloma@kubeprueba:~$ kubectl config view
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: DATA+OMITTED
+    server: https://172.22.200.133:6443
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    user: kubernetes-admin
+  name: kubernetes-admin@kubernetes
+current-context: kubernetes-admin@kubernetes
+kind: Config
+preferences: {}
+users:
+- name: kubepaloma
+  user:
+    client-certificate: /home/kubepaloma/kubepaloma.crt
+    client-key: /home/kubepaloma/kubepaloma.key
+- name: kubernetes-admin
+  user:
+    client-certificate-data: REDACTED
+    client-key-data: REDACTED
+~~~
+
+A continuación, se va a crear un contexto para el nodo y usuario cliente:
+~~~
+kubepaloma@kubeprueba:~$ kubectl config set-context kubepaloma --cluster=kubernetes --user=kubepaloma
+Context "devops" created.
+~~~
+
+Y se comprueba que se ha creado:
+~~~
+kubepaloma@kubeprueba:~$ kubectl config get-contexts  
+CURRENT   NAME                          CLUSTER      AUTHINFO           NAMESPACE         
+          kubepaloma                    kubernetes   kubepaloma         
+*         kubernetes-admin@kubernetes   kubernetes   kubernetes-admin  
+~~~
+
+
+
 ## 1.3. Control de admisión
+ ****************************************
+ ** AQUÍ EXPLICAR BIEN Y PONER OPCIONES**
+ ****************************************
+
+### 1.3.1. Caso práctico
+Se va a crear un espacio de nombre para que pueda trabajar el usuario.
+~~~
+kubepaloma@kubeprueba:~$ kubectl create namespace kubepaloma
+namespace/kubepaloma created
+~~~
+
+Y se crea una RBAC a través de un fichero de configuración, en este caso se llama RBAC_kubepaloma.yaml con el siguiente contenido:
+~~~
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+    name: kubepaloma
+    namespace: kubepaloma
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["jobs"]
+  verbs: ["watch", "create", "update", "patch", "delete"]
+~~~
+
+> La configuración del fichero no parece tener mucho sentido, pero es para ejemplificar.
+
+En este caso se le va a otorgar permisos de realizar las acciones de get, list y watch los pods y de watch, create, update, patch y delete sobre los jobs.
+
+A continuación, se acplica el rol:
+~~~
+kubepaloma@kubeprueba:~$ kubectl apply -f RBAC_kubepaloma.yaml 
+role.rbac.authorization.k8s.io/kubepaloma created
+~~~
+
+Y se comprueba la creación del rol:
+~~~
+kubepaloma@kubeprueba:~$ kubectl get role -n kubepaloma
+NAME         CREATED AT
+kubepaloma   2020-04-22T15:46:25Z
+~~~
+
+Por último, hay que asignar el rol al usuario. Se va a realizar a través de un fichero yaml que llamaremos kubepaloma.yaml:
+~~~
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: full-control
+  namespace: kubepaloma
+subjects:
+- kind: User
+  name: kubepaloma
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: kubepaloma
+  apiGroup: rbac.authorization.k8s.io
+~~~
+
+Se aplica:
+~~~
+kubepaloma@kubeprueba:~$ kubectl apply -f kubepaloma.yaml
+rolebinding.rbac.authorization.k8s.io/full-control unchanged
+~~~
+
+Se va a comprobar si se ha realizado bien la RBAC. En primer lugar, se cambia de contexto:
+~~~
+kubepaloma@kubeprueba:~$ kubectl config use-context kubepaloma
+Switched to context "kubepaloma".
+~~~
+
+Vamos a listar por pods, algo que está permitido en el namespace kubepaloma:
+~~~
+kubepaloma@kubeprueba:~$ kubectl get pods
+Error from server (Forbidden): pods is forbidden: User "kubepaloma" cannot list resource "pods" in API group "" in the namespace "default"
+~~~
+
+No nos permita listar los pods, puesto que solo se tiene permiso en el namespace kubepaloma:
+~~~
+kubepaloma@kubeprueba:~$ kubectl get pods -n kubepaloma
+No resources found in kubepaloma namespace.
+~~~
+
+Pero no nos deja listar los jobs:
+~~~
+kubepaloma@kubeprueba:~$ kubectl get jobs -n kubepaloma
+Error from server (Forbidden): jobs.batch is forbidden: User "kubepaloma" cannot list resource "jobs" in API group "batch" in the namespace "kubepaloma"
+~~~
+
+
