@@ -57,43 +57,38 @@ kubectl config view
 ~~~
 
 #### 2.1.1.1. Caso práctico
-Para la comprobación de la autorización a través de certificados openssl se ha creado, en una máquina agena al cluster, un usuario llamado **kubepaloma** que pertenere al grupo **proyecto**.
-~~~
-debian@kubeprueba:~$ sudo addgroup proyecto
-Adding group `proyecto' (GID 1001) ...
-Done.
-debian@kubeprueba:~$ sudo useradd -m kubepaloma -G proyecto -s /bin/bash
-~~~
-
 Se instala kubectl en el nodo cliente y desde el master se dan permiso de lectura al fichero **/etc/kubernetes/admin.conf**:
 ~~~
 debian@kubemaster:~$ sudo chmod 644 /etc/kubernetes/admin.conf
 ~~~
 
-Desde el nodo cliente:
+Desde el nodo cliente se va copiar el el fichero de configuración del master:
 ~~~
-kubepaloma@kubeprueba:~$ export IP_MASTER=172.22.200.133
-kubepaloma@kubeprueba:~$ sftp debian@${IP_MASTER}
+debian@kubecliente:~$ sftp debian@${IP_MASTER}
 The authenticity of host '172.22.200.133 (172.22.200.133)' can't be established.
-ECDSA key fingerprint is SHA256:ZfB+qiMtU9/Rf0HJvTWFQqc8FcI+tKBznMdFatKwz/w.
+ECDSA key fingerprint is SHA256:Y+knQJVp5El7mt7x/P3yI74ZhoAi2AF9fwIDsMEbhtU.
 Are you sure you want to continue connecting (yes/no)? yes
 Warning: Permanently added '172.22.200.133' (ECDSA) to the list of known hosts.
 debian@172.22.200.133's password: 
 Connected to debian@172.22.200.133.
 sftp> get /etc/kubernetes/admin.conf
 Fetching /etc/kubernetes/admin.conf to admin.conf
-/etc/kubernetes/admin.conf                       100% 5448   511.5KB/s   00:00    
+/etc/kubernetes/admin.conf                       100% 5444     1.4MB/s   00:00    
 sftp> exit
-kubepaloma@kubeprueba:~$ mkdir .kube
-kubepaloma@kubeprueba:~$ mv admin.conf ~/.kube/mycluster.conf
-kubepaloma@kubeprueba:~$ sed -i -e "s#server: https://.*:6443#server: https://${IP_MASTER}:6443#g" ~/.kube/mycluster.conf
-kubepaloma@kubeprueba:~$ export KUBECONFIG=~/.kube/mycluster.conf
 ~~~
+
+Y se crea el directorio .kube para alojar el fichero de configuración:
+~~~
+debian@kubecliente:~$ mkdir .kube
+debian@kubecliente:~$ mv admin.conf ~/.kube/mycluster.conf
+debian@kubecliente:~$ sed -i -e "s#server: https://.*:6443#server: https://${IP_MASTER}:6443#g" ~/.kube/mycluster.conf
+debian@kubecliente:~$ export KUBECONFIG=~/.kube/mycluster.conf
+~~~
+
 
 Finalmente se comprueba que funciona correctamente:
 ~~~
-kubepaloma@kubeprueba:~$ kubectl cluster-info
-
+debian@kubecliente:~$ kubectl cluster-info
 Kubernetes master is running at https://172.22.200.133:6443
 KubeDNS is running at https://172.22.200.133:6443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
 ~~~
@@ -102,37 +97,39 @@ En estos momentos, el nodo cliente funciona como el administrador porque se ha c
 
 Se genera la clave y la petición de firma:
 ~~~
-kubepaloma@kubeprueba:~$ openssl genrsa -out kubepaloma.key 2048
+debian@kubecliente:~$ openssl genrsa -out kubecliente.key 2048
 Generating RSA private key, 2048 bit long modulus (2 primes)
-................................+++++
-........+++++
+....................+++++
+................+++++
 e is 65537 (0x010001)
-kubepaloma@kubeprueba:~$ openssl req -new -key kubepaloma.key -out kubepaloma.csr -subj "/CN=kubepaloma/O=proyecto"
+debian@kubecliente:~$ openssl req -new -key kubecliente.key -out kubecliente.csr -subj "/CN=kubecliente/O=proyecto"
 ~~~
 
 Se envía la petición de firma al nodo master para que se cree el certificado:
 ~~~
-kubepaloma@kubeprueba:~$ scp kubepaloma.csr debian@${IP_MASTER}:
+debian@kubecliente:~$ scp kubecliente.csr debian@${IP_MASTER}:
 debian@172.22.200.133's password: 
-kubepaloma.csr                                   100%  920   586.4KB/s   00:00
+kubecliente.csr                                  100%  920   554.1KB/s   00:00 
 ~~~
 
 Desde el nodo master se firma la petición:
 ~~~
-debian@kubemaster:~$ sudo openssl x509 -req -in kubepaloma.csr -CA /etc/kubernetes/pki/ca.crt -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out kubepaloma.crt -days 90
+debian@kubemaster:~$ sudo openssl x509 -req -in kubecliente.csr -CA /etc/kubernetes/pki/ca.crt -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out kubecliente.crt -days 90
 Signature ok
-subject=CN = kubepaloma, O = proyecto
+subject=CN = kubecliente, O = proyecto
 Getting CA Private Key
 ~~~
 
 A continuación, el cliente obtiene el certificado:
 ~~~
-kubepaloma@kubeprueba:~$ sftp debian@${IP_MASTER}
+debian@kubecliente:~$ sftp debian@${IP_MASTER}
 debian@172.22.200.133's password: 
 Connected to debian@172.22.200.133.
-sftp> get /home/debian/kubepaloma.crt 
-Fetching /home/debian/kubepaloma.crt to kubepaloma.crt
-/home/debian/kubepaloma.crt                      100% 1021   554.5KB/s   00:00    
+sftp> get /home/debian/k
+kubecliente.crt     kubecliente.csr     
+sftp> get /home/debian/kubecliente.crt 
+Fetching /home/debian/kubecliente.crt to kubecliente.crt
+/home/debian/kubecliente.crt                     100% 1021   302.5KB/s   00:00    
 sftp> exit
 ~~~
 
@@ -169,13 +166,14 @@ kubectl config current-context
 ### 2.2.1. Caso práctico
 Se crea el usuario en el clúster:
 ~~~
-kubepaloma@kubeprueba:~$ kubectl config set-credentials kubepaloma --client-certificate=kubepaloma.crt --client-key=kubepaloma.key
-User "kubepaloma" set.
+debian@kubecliente:~$ kubectl config set-credentials kubecliente --client-certificate=kubecliente.crt --client-key=kubecliente.key
+User "kubecliente" set.
 ~~~
+
 
 Y se comprueba que el usuario se ha creado correctamente:
 ~~~
-kubepaloma@kubeprueba:~$ kubectl config view
+debian@kubecliente:~$ kubectl config view
 apiVersion: v1
 clusters:
 - cluster:
@@ -191,10 +189,10 @@ current-context: kubernetes-admin@kubernetes
 kind: Config
 preferences: {}
 users:
-- name: kubepaloma
+- name: kubecliente
   user:
-    client-certificate: /home/kubepaloma/kubepaloma.crt
-    client-key: /home/kubepaloma/kubepaloma.key
+    client-certificate: /home/debian/kubecliente.crt
+    client-key: /home/debian/kubecliente.key
 - name: kubernetes-admin
   user:
     client-certificate-data: REDACTED
@@ -203,16 +201,16 @@ users:
 
 A continuación, se va a crear un contexto para el nodo y usuario cliente:
 ~~~
-kubepaloma@kubeprueba:~$ kubectl config set-context kubepaloma --cluster=kubernetes --user=kubepaloma
-Context "devops" created.
+debian@kubecliente:~$ kubectl config set-context kubecliente --cluster=kubernetes --user=kucliente
+Context "kubecliente" created.
 ~~~
 
 Y se comprueba que se ha creado:
 ~~~
-kubepaloma@kubeprueba:~$ kubectl config get-contexts  
-CURRENT   NAME                          CLUSTER      AUTHINFO           NAMESPACE         
-          kubepaloma                    kubernetes   kubepaloma         
-*         kubernetes-admin@kubernetes   kubernetes   kubernetes-admin  
+debian@kubecliente:~$ kubectl config get-contexts
+CURRENT   NAME                          CLUSTER      AUTHINFO           NAMESPACE
+          kubecliente                   kubernetes   kucliente          
+*         kubernetes-admin@kubernetes   kubernetes   kubernetes-admin   
 ~~~
 
 
