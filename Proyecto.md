@@ -1,9 +1,20 @@
-# 1. Control de acceso a la API
+# 1. Introducción
+
+## 1.1. Creación del escenario
+Para los casos prácticos se ha utilizado un cluster de Kubernetes instalados sobre tres máquinas con sistemas operativos Debian Buster y una máquina cliente sobre el mismo sistema. Las caracterísitca son las siguientes:
+- **kubemaster**: master del cluster de Kubernetes. 4GB de Ram de 40GB de disco.
+- **kubeminion1** y **kubeminion2**: minions del cluster de Kubernetes. 2GB de RAM y 20GB de disco.
+- **kubecliente**: cliente del cluster de kubernetes. 1GB de RAM y 20GB de disco.
+
+Para la isntalación del cluster se ha seguido una [guía propia de instalación](https://github.com/PalomaR88/kubernete/blob/master/Practica.md#instalaci%C3%B3n-de-kubernetes).
+
+
+# 2. Control de acceso a la API
 Para que los usuarios puedan ser autorizados para el acceso a la API se pasa por 3 etapas: autenticación, autorización y control de admisión.
 
 Los clúster de Kubernetes tienen un certificado, que seuele estar autorfimado, y se incluyen en **$USER/.kube/config**. Este cerficado se escribe automáticamente cuando se crea un clúster y se puede compartir con otros usuarios.
 
-## 1.1. Autenticación
+## 2.1. Autenticación
 Hay dos categorías de usuarios en Kubernetes: cuentas administradas por Kubernetes y usuarios normales administrados por un servicio externo e independiente como Keystone, Coocle Accounts o una lista de ficheros.
 
 Aquí se trabajará con las cuentas administradas por Kubernetes. Se crean automáticamente por el servidor API o manualmente a través de una llamada. Éstas están vinculadas a un conjunto de credenciales almacenadas como Secrets.
@@ -12,7 +23,7 @@ Para autenticar las solicitudes de API Kubernetes utiliza certificados de client
 
 Se pueden habilitar varios métodos de autenticación a la vez, pero, por lo general, deben usarse el meodo a través de tokens y otro. 
 
-### 1.1.1. Certificados de cliente X509
+### 2.1.1. Certificados de cliente X509
 Se debe generar certificados desde la línea de comandos a través de **easyrsa**, **openssl** o **cfssl**. En esta tarea se explica la creación de certificados a través de **openssl**. 
 
 Estos certificados deben ser firmados por el certificado y la clave que proporciona Kubernetes. En el caso de tener instalado kubeadm se encuentra en /etc/kubernetes/pki/ y en minikube en ~/.minikube/. También se pueden crear credenciales propias, para ello se necesita una entidad certificadora. 
@@ -45,7 +56,7 @@ Para comprobar los usuarios que se han creado:
 kubectl config view
 ~~~
 
-#### 1.1.1.1. Caso práctico
+#### 2.1.1.1. Caso práctico
 Para la comprobación de la autorización a través de certificados openssl se ha creado, en una máquina agena al cluster, un usuario llamado **kubepaloma** que pertenere al grupo **proyecto**.
 ~~~
 debian@kubeprueba:~$ sudo addgroup proyecto
@@ -126,10 +137,10 @@ sftp> exit
 ~~~
 
 
-### 1.1.2. Tokens
-#### 1.1.2.1. Caso práctico
+### 2.1.2. Tokens
+#### 2.1.2.1. Caso práctico
 
-## 1.2. Autorización
+## 2.2. Autorización
 Creación de usuario en el clúster con autenticación de certificados:
 ~~~
 kubectl config set-credentials <nombre_usuario> --client-certificate=<nombre_certificado>.crt --client-key=<nombre_clave>.key
@@ -155,7 +166,7 @@ Y para ver el contexto que se está usuando:
 kubectl config current-context
 ~~~
 
-### 1.2.1. Caso práctico
+### 2.2.1. Caso práctico
 Se crea el usuario en el clúster:
 ~~~
 kubepaloma@kubeprueba:~$ kubectl config set-credentials kubepaloma --client-certificate=kubepaloma.crt --client-key=kubepaloma.key
@@ -206,12 +217,12 @@ CURRENT   NAME                          CLUSTER      AUTHINFO           NAMESPAC
 
 
 
-## 1.3. Control de admisión
+## 2.3. Control de admisión
  ****************************************
  ** AQUÍ EXPLICAR BIEN Y PONER OPCIONES**
  ****************************************
 
-### 1.3.1. Caso práctico
+### 2.3.1. Caso práctico
 Se va a crear un espacio de nombre para que pueda trabajar el usuario.
 ~~~
 kubepaloma@kubeprueba:~$ kubectl create namespace kubepaloma
@@ -297,5 +308,15 @@ Pero no nos deja listar los jobs:
 kubepaloma@kubeprueba:~$ kubectl get jobs -n kubepaloma
 Error from server (Forbidden): jobs.batch is forbidden: User "kubepaloma" cannot list resource "jobs" in API group "batch" in the namespace "kubepaloma"
 ~~~
+
+# 3. Herramientas auxiliares
+Se ha investigado sobre dos herramientas auxiliares que facilite el manejo de usuarios y permisos en clusters de Kubernetes que son Elastickube y Klum.
+
+# 3.1. Elastickube
+Esta herramienta se encuentra disponible en el [repositorio oficial](https://github.com/ElasticBox/elastickube.git). Tras la instalación se ha llegado a la siguiente conclusión: la herramienta está desactualizada y no es compatible con las nuevas versiones de Kubernetes. Además, en la instalación se han producido diferentes cambios en la configuración de kubernetes que hacen inservible el cluster. 
+
+
+# 3.2. Klum
+Esta herramienta también se encuentra en su corresponddiente [repositorio oficial](https://github.com/ibuildthecloud/klum.git). Tras un primer acercamiento a esta herramienta se concluye que es muy nueva??(no me gusta este adjetivo, lo tengo que cambiar) lo que ocasiona que todavía no tiene ninguna utilizadad.
 
 
