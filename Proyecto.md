@@ -8,11 +8,14 @@ Para los casos prácticos se ha utilizado un cluster de Kubernetes instalados so
 
 Para la isntalación del cluster se ha seguido una [guía propia de instalación](https://github.com/PalomaR88/kubernete/blob/master/Practica.md#instalaci%C3%B3n-de-kubernetes).
 
+El puerto de acceso a la API en un cluster de Kubernetes típico es en el 6443. Por lo tanto, se abrirán estos puertos en las diferentes máquinas. Otros puertos que se van a usar son el 80 para acceder a los servicios, 443 para los servicios a través de HTTPS y del 30000 al 40000 para aplicaciones con el servicio NodePort.
 
 # 2. Control de acceso a la API
 Para que los usuarios puedan ser autorizados para el acceso a la API se pasa por 3 etapas: autenticación, autorización y control de admisión.
 
 Los clúster de Kubernetes tienen un certificado, que seuele estar autorfimado, y se incluyen en **$USER/.kube/config**. Este cerficado se escribe automáticamente cuando se crea un clúster y se puede compartir con otros usuarios.
+
+
 
 ## 2.1. Autenticación
 Hay dos categorías de usuarios en Kubernetes: cuentas administradas por Kubernetes y usuarios normales administrados por un servicio externo e independiente como Keystone, Coocle Accounts o una lista de ficheros.
@@ -64,6 +67,7 @@ debian@kubemaster:~$ sudo chmod 644 /etc/kubernetes/admin.conf
 
 Desde el nodo cliente se va copiar el el fichero de configuración del master:
 ~~~
+export IP_MASTER=172.22.20.133
 debian@kubecliente:~$ sftp debian@${IP_MASTER}
 The authenticity of host '172.22.200.133 (172.22.200.133)' can't be established.
 ECDSA key fingerprint is SHA256:Y+knQJVp5El7mt7x/P3yI74ZhoAi2AF9fwIDsMEbhtU.
@@ -166,19 +170,18 @@ kubectl config current-context
 ### 2.2.1. Caso práctico
 Se crea el usuario en el clúster:
 ~~~
-debian@kubecliente:~$ kubectl config set-credentials kubecliente --client-certificate=kubecliente.crt --client-key=kubecliente.key
+debian@kubemaster:~$ kubectl config set-credentials kubecliente --client-certificate=kubecliente.crt --client-key=kubecliente.key
 User "kubecliente" set.
 ~~~
 
-
 Y se comprueba que el usuario se ha creado correctamente:
 ~~~
-debian@kubecliente:~$ kubectl config view
+debian@kubemaster:~$ kubectl config view
 apiVersion: v1
 clusters:
 - cluster:
     certificate-authority-data: DATA+OMITTED
-    server: https://172.22.200.133:6443
+    server: https://10.0.0.3:6443
   name: kubernetes
 contexts:
 - context:
@@ -201,13 +204,13 @@ users:
 
 A continuación, se va a crear un contexto para el nodo y usuario cliente:
 ~~~
-debian@kubecliente:~$ kubectl config set-context kubecliente --cluster=kubernetes --user=kucliente
+debian@kubemaster:~$ kubectl config set-context kubecliente --cluster=kubernetes --user=kucliente
 Context "kubecliente" created.
 ~~~
 
 Y se comprueba que se ha creado:
 ~~~
-debian@kubecliente:~$ kubectl config get-contexts
+debian@kubemaster:~$ kubectl config get-contexts
 CURRENT   NAME                          CLUSTER      AUTHINFO           NAMESPACE
           kubecliente                   kubernetes   kucliente          
 *         kubernetes-admin@kubernetes   kubernetes   kubernetes-admin   
@@ -215,12 +218,110 @@ CURRENT   NAME                          CLUSTER      AUTHINFO           NAMESPAC
 
 
 
-## 2.3. Control de admisión
- ****************************************
- ** AQUÍ EXPLICAR BIEN Y PONER OPCIONES**
- ****************************************
+## 2.3. Autorización RBAC
+El control de acceso basado en roles (RBAC) es un método para regular el acceso a los recursos en función de los roles de los usuarios. Para ello utiliza **rbac.authorization.k8s.io** que permite configurar dinámicamente políticas a través de la API de Kubernetes. 
 
-### 2.3.1. Caso práctico
+### 2.3.1. Objetos API
+La API RBAC declara cuatro tipos de objetos: Role, ClusterRole, RoleBinding y ClusterRoleBinding. Para trabajar con estos objetos, como todos los objetos de Kubernetes, se debe usar la API de Kubernetes. 
+
+Los objetos de Kubernetes son entidades persistentes en el sistema de Kubernetes que se usan para representar el estado del cluster. Pueden describir:
+- Qué palicaciones en contenedores se están ejecutando y en qué nodos.
+- Los recursos disponibles para esas aplicaciones. 
+- Las políticas sobre cómo se comportan esas aplicaciones (renicio, actualizaciones, tolerancia a fallos, etc.).
+
+#### 2.3.1.1. Role y ClusterRol
+Un Role RBAC o ClusterRole contiene reglas que representan un conjunto de permisos siendo estos aditivos, es decir, no se usan reglas de negación. 
+
+En el caso de Role RBAC se establecen permisos dentro de un namespace particular, mientras que los ClusterRole permite definir un mismo rol en todo el cluster.
+
+Ejemplo de Role:
+~~~
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+    name: <nombre_rol>
+    namespace: <namespace>
+rules:
+- apiGroups: [""]
+  resources: [""]
+  verbs: [""]
+...
+~~~
+
+Ejemplo de ClusterRole:
+~~~
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+    name: <nombre_rol>
+rules:
+- apiGroups: [""]
+  resources: [""]
+  verbs: [""]
+...
+~~~
+
+Los recursos a los que se hacen referencia se representan y accede a ellos mediante una cadena de nombre. Estos son algunos de los recursos: "pods", "secrets", "deployments", "services", "pods/log", "configmaps", "endpoints", "crontrabs", "jobs", "nodes".
+*
+*
+*
+*
+*
+******************************
+En este caso, podses el recurso de espacio de nombres para los recursos de Pod, y loges un subrecurso de pods. Para representar esto en un rol RBAC, use una barra inclinada ( /) para delimitar el recurso y el subrecurso. Para permitir que un sujeto lea podsy también acceder al logsubrecurso para cada uno de esos Pods, escriba:
+******************************
+*
+*
+*
+*
+*
+*
+*
+*
+*
+https://kubernetes.io/docs/reference/access-authn-authz/rbac/
+#### 2.3.1.2. RoleBinding y ClusterRoleBinding
+RoleBinding o ClusterRoleBinding otorga los permisos definidos en un rol a un usuario o conjunto de usuarios. RoleBinding otorga permisos dentro de un namespace específico, mientras que un ClusterRoleBinding otorga acceso a todo el cluster.
+
+Un RoleBinding puede hace referencia a un Role, en el mismo namespace, o a un ClusterRole. En este caso, el ClusterRole se vincula al namespace específico del RoleBinding. Si se quiere vincular un ClusterRole en todo el cluster se debe utilizar ClusterRoleBinding.
+
+Ejemplo de RoleBinding:
+~~~
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: <nombre_enlace_rol>
+  namespace: <namespace>
+subjects:
+- kind: [ User | Group ]
+  name: <nombre_usuario/grupo>
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: [ Role | ClusterRole ]
+  name: <nombre_Role/ClusterRole>
+  apiGroup: rbac.authorization.k8s.io
+~~~
+
+Ejemplo de ClusterRoleBinding:
+~~~
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: <nombre_enlace_rol>
+  namespace: <namespace>
+subjects:
+- kind: [ User | Group ]
+  name: <nombre_usuario/grupo>
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: [ Role | ClusterRole ]
+  name: <nombre_Role/ClusterRole>
+  apiGroup: rbac.authorization.k8s.io
+~~~
+
+
+
+### 2.3.2. Caso práctico
 Se va a crear un espacio de nombre para que pueda trabajar el usuario.
 ~~~
 kubepaloma@kubeprueba:~$ kubectl create namespace kubepaloma
