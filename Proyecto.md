@@ -229,7 +229,7 @@ Los objetos de Kubernetes son entidades persistentes en el sistema de Kubernetes
 - Los recursos disponibles para esas aplicaciones. 
 - Las políticas sobre cómo se comportan esas aplicaciones (renicio, actualizaciones, tolerancia a fallos, etc.).
 
-#### 2.3.1.1. Role y ClusterRol
+#### 2.3.1.1. Role y ClusterRole
 Un Role RBAC o ClusterRole contiene reglas que representan un conjunto de permisos siendo estos aditivos, es decir, no se usan reglas de negación. 
 
 En el caso de Role RBAC se establecen permisos dentro de un namespace particular, mientras que los ClusterRole permite definir un mismo rol en todo el cluster.
@@ -261,27 +261,40 @@ rules:
 ...
 ~~~
 
-Los recursos a los que se hacen referencia se representan y accede a ellos mediante una cadena de nombre. Estos son algunos de los recursos: "pods", "secrets", "deployments", "services", "pods/log", "configmaps", "endpoints", "crontrabs", "jobs", "nodes".
-*
-*
-*
-*
-*
-******************************
-En este caso, podses el recurso de espacio de nombres para los recursos de Pod, y loges un subrecurso de pods. Para representar esto en un rol RBAC, use una barra inclinada ( /) para delimitar el recurso y el subrecurso. Para permitir que un sujeto lea podsy también acceder al logsubrecurso para cada uno de esos Pods, escriba:
-******************************
-*
-*
-*
-*
-*
-*
-*
-*
-*
-https://kubernetes.io/docs/reference/access-authn-authz/rbac/
+Las dos claves para entender la sección **rules** son los recursos y las acciones, es decir, **Resources** y **Verbs**
+
+Los recursos, **resources**, como se ha indicado anteriormente, son los conjunto de objetos API de Kubernetes disponibles en el cluster. A los que se hacen referencia se representan y accede a ellos mediante una cadena de nombre. Estos son algunos de los recursos: "pods", "secrets", "deployments", "services", "configmaps", "endpoints", "crontrabs", "jobs", "nodes", "replicasets", "configMaps", "autoScaler". Para indicar subrecursos se emplea la barra inclinada, por ejemplo, el subrecurso log de los pods se indica de la siguiente forma: "pods/log".
+
+Con la opción **resourceNames** se puede consultar los recursos por nombre. Esta opción no se puede usar con las restricciones create o deletecollection por razones lógicas.
+
+El conjunto de operaciones que se pueden ejecutar sobre los recursos se indican en **verbs**. Son, por ejemplo, "get", "watch", "create", "delete", "list", "patch", "update", "".
+
+A continuación, se van a desarrollar algunos ejemplos de la sección rules para poner en práctica lo anteriormente explicado:
+
+- Permitir que se puedan listar los pods, es decir, ejecutar el comando get pods:
+~~~
+rules:
+ - apiGroups: ["*"]
+   resources: ["pods"]
+   verbs: ["list"]
+~~~
+
+- Permitir acceso de solo lectura en los pods, sin poder eliminar pods directamente pero sí a través de implementaciones,**deployments**:
+~~~
+ rules:
+ - apiGroups: ["*"]
+   resources: ["pods"]
+   verbs: ["list","get","watch"]
+ - apiGroups: ["extensions","apps"]
+   resources: ["deployments"]
+   verbs: ["get","list","watch","create","update","patch","delete"]
+~~~
+
+****************************
+
+
 #### 2.3.1.2. RoleBinding y ClusterRoleBinding
-RoleBinding o ClusterRoleBinding otorga los permisos definidos en un rol a un usuario o conjunto de usuarios. RoleBinding otorga permisos dentro de un namespace específico, mientras que un ClusterRoleBinding otorga acceso a todo el cluster.
+RoleBinding o ClusterRoleBinding otorga los permisos definidos en un rol a un usuario o cuentas de servicios, **ServiceAccount**. RoleBinding otorga permisos dentro de un namespace específico, mientras que un ClusterRoleBinding otorga acceso a todo el cluster.
 
 Un RoleBinding puede hace referencia a un Role, en el mismo namespace, o a un ClusterRole. En este caso, el ClusterRole se vincula al namespace específico del RoleBinding. Si se quiere vincular un ClusterRole en todo el cluster se debe utilizar ClusterRoleBinding.
 
@@ -293,8 +306,8 @@ metadata:
   name: <nombre_enlace_rol>
   namespace: <namespace>
 subjects:
-- kind: [ User | Group ]
-  name: <nombre_usuario/grupo>
+- kind: [ User | Group | ServiceAccount ]
+  name: <nombre_usuario/grupo/ServiceAccount>
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: [ Role | ClusterRole ]
@@ -310,8 +323,8 @@ metadata:
   name: <nombre_enlace_rol>
   namespace: <namespace>
 subjects:
-- kind: [ User | Group ]
-  name: <nombre_usuario/grupo>
+- kind: [ User | Group | ServiceAccount]
+  name: <nombre_usuario/grupo/ServiceAccount>
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: [ Role | ClusterRole ]
@@ -319,7 +332,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ~~~
 
-
+https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 
 ### 2.3.2. Caso práctico
 Se va a crear un espacio de nombre para que pueda trabajar el usuario.
