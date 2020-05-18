@@ -332,9 +332,99 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ~~~
 
-https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 
 ### 2.3.2. Caso práctico
+
+***************************************
+PASOS PARA CREAR VOLUMEN PERSITENTE PROBAR PRIMERO EN EL MASTER
+ver volúmenes persistentes
+~~~
+kubectl get pv
+~~~
+
+definir un volumen persistente en kubernetes, buscar en internet
+
+definir un persistent volume claim, un fichero yaml:
+~~~
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+    name: nfs-pvc
+spec:
+    accessModes:
+        #indica que todos los nodos puedan escribir, escribir en el volumen
+        - ReadWriteMany
+    resources:
+        requests:
+            storage: 1Gi
+~~~
+
+Se crea el requerimiento del volumen:
+~~~
+kubectl create -f pvc.yaml
+~~~
+
+Para borrar el volumen:
+~~~
+kubectl delete pbc nombre_volumen
+~~~
+
+Despliegue de una imagen nginx con este volumen, en un .yaml:
+~~~
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+    name: nginx
+    labels:
+        app: nginx
+spec:
+    template:
+        metadata:
+            labels:
+                app: nginx
+        spec:
+            containers:
+            - image: nginx
+              name: nginx
+              ports:
+              - name: http
+                containerPort: 80
+              volumeMounts:
+              - mountPath: /usr/share/nginx/html
+                name: nfs-vol
+            volumes:
+            - name: nfs-vol
+              persistentVolumeClaim:
+                claimName: nfs-pvc
+~~~
+
+Se despliega:
+~~~
+kubctl create -f nginc-deply.yaml
+~~~
+
+Se crea el servicio para acceder a la aplicación:
+~~~
+kubectl expose deply nginx --port=80 --type=NodePort
+~~~
+
+En el direcotrio /var/shared del master se guarda la información compartida con los nodos.
+Aquí se crea un index.html.
+
+***************************************
+
+
+
+
+
+
+
+
+
+
+
+
+**********************************************
 Se va a crear un espacio de nombre para que pueda trabajar el usuario.
 ~~~
 kubepaloma@kubeprueba:~$ kubectl create namespace kubepaloma
@@ -432,3 +522,4 @@ Esta herramienta se encuentra disponible en el [repositorio oficial](https://git
 Esta herramienta también se encuentra en su corresponddiente [repositorio oficial](https://github.com/ibuildthecloud/klum.git). Tras un primer acercamiento a esta herramienta se concluye que es muy nueva??(no me gusta este adjetivo, lo tengo que cambiar) lo que ocasiona que todavía no tiene ninguna utilizadad.
 
 
+https://kubernetes.io/docs/reference/access-authn-authz/rbac/
