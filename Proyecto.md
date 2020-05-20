@@ -337,12 +337,60 @@ roleRef:
 
 ***************************************
 PASOS PARA CREAR VOLUMEN PERSITENTE PROBAR PRIMERO EN EL MASTER
+
+--------------------------
+En primer lugar se necesita cierta configuración en el nodo master y los minion para crear volúmenes persistentes.
+
+En el caso del nodo master:
+~~~
+debian@kubemaster:~$ sudo apt install nfs-common nfs-kernel-server
+root@kubemaster:/home/debian# mkdir -p /home/shared/vol1
+root@kubemaster:/home/debian# echo "/home/shared/vol1 *(rw,sync,no_root_squash,no_all_squash)" >> /etc/exports
+root@kubemaster:/home/debian# rm /lib/systemd/system/nfs-common.service
+root@kubemaster:/home/debian# systemctl daemon-reload
+root@kubemaster:/home/debian# chown -R systemd-coredump:root /home/shared
+root@kubemaster:/home/debian# systemctl restart nfs-kernel-server
+~~~
+
+En los nodos:
+~~~
+debian@kubeminion1:~$ sudo apt install -y nfs-common
+root@kubeminion1:/home/debian# rm /lib/systemd/system/nfs-common.service
+root@kubeminion1:/home/debian# systemctl daemon-reload
+root@kubeminion1:/home/debian# mkdir -p /var/data/vol1
+root@kubeminion1:/home/debian# mount -t nfs4 10.0.0.3:/home/shared/vol1 /var/data/vol1
+~~~
+
+Fichero pv.yaml:
+~~~
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: volumen1
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Recycle
+  nfs:
+    path: /home/shared/vol1
+    server: 10.0.0.3
+~~~
+
+~~~
+debian@kubemaster:~$ kubectl create -f pv.yaml
+persistentvolume/volumen1 created
+~~~
+--------------------------
+
+
+
 ver volúmenes persistentes
 ~~~
 kubectl get pv
 ~~~
 
-definir un volumen persistente en kubernetes, buscar en internet
 
 definir un persistent volume claim, un fichero yaml:
 ~~~
@@ -350,6 +398,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
     name: nfs-pvc
+    namespace: prueba
 spec:
     accessModes:
         #indica que todos los nodos puedan escribir, escribir en el volumen
@@ -370,6 +419,29 @@ kubectl delete pbc nombre_volumen
 ~~~
 
 Despliegue de una imagen nginx con este volumen, en un .yaml:
+~~~
+apiVersion: v1
+kind: Pod
+metadata:
+  name: www-vol
+  namespaces: prueba
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    volumeMounts:
+      - mountPath: /usr/share/nginx/html
+        name: nfs-vol
+  volumes:
+    - name: nfs-vol
+      persistentVolumeClaim:
+        claimName: nfs-pvc
+~~~
+
+debian@kubemaster:~$ kubectl create -f pod-nginx.yaml 
+pod/www-vol created
+
+
 ~~~
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -403,9 +475,19 @@ Se despliega:
 kubctl create -f nginc-deply.yaml
 ~~~
 
+debian@kubemaster:~$ kubectl port-forward www-vol -n prueba 8080:80
+
+kubectl port-forward www-vol 8080:80
+Forwarding from 127.0.0.1:8080 -> 80
+Forwarding from [::1]:8080 -> 80
+
+
+
+
+
 Se crea el servicio para acceder a la aplicación:
 ~~~
-kubectl expose deply nginx --port=80 --type=NodePort
+kubectl expose deploy www-vol -n prueba --port=80 --type=NodePort
 ~~~
 
 En el direcotrio /var/shared del master se guarda la información compartida con los nodos.
