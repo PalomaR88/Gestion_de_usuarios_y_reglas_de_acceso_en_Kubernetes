@@ -334,8 +334,231 @@ roleRef:
 
 
 ### 2.3.2. Caso práctico
-
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*************probarlo otra vez, crear dos volúmenes y crear un nuevo namespace 
 ***************************************
+Fichero creación del servicio tipo ClusterIP que conecte mariadb con wordpress:
+~~~
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb-service
+  namespace: prueba
+  labels:
+    app: wordpress
+    type: database
+spec:
+  selector:
+    app: wordpress
+    type: database
+  ports:
+  - port: 3306
+    targetPort: db-port
+  type: ClusterIP
+~~~
+
+~~~
+debian@kubemaster:~$ kubectl create -f serv-maria.yaml 
+service/mariadb-service created
+~~~
+
+Se crea una estructura deploy para mariadb:
+~~~
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: despliegue-mariadb
+  namespace: prueba
+  labels:
+    app: wordpress
+    type: database
+spec:
+  selector:
+    matchLabels:
+      app: wordpress
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        type: database
+    spec:
+      containers:
+        - name: mariadb
+          image: mariadb
+          ports:
+            - containerPort: 3306
+              name: db-port
+          env:
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: dbuser
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: dbname
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: dbpassword
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: dbrootpassword
+~~~
+
+~~~
+debian@kubemaster:~$ kubectl create -f mariadb.yaml 
+deployment.apps/despliegue-mariadb created
+~~~
+
+
+Fichero del secreto:
+~~~
+apiVersion: v1
+data:
+  dbname: ZGJfd29yZHByZXNz
+  dbpassword: ZGJfcGFzcw==
+  dbrootpassword: ZGJfcm9vdA==
+  dbuser: d3BfdXNlcg==
+kind: Secret
+metadata:
+  creationTimestamp: null
+  name: mariadb-secret
+  namespace: prueba
+~~~
+
+~~~
+debian@kubemaster:~$ kubectl create -f secret.yaml 
+secret/mariadb-secret created
+~~~
+
+
+Fichero deply para wordpress:
+~~~
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordpress-deployment
+  namespace: prueba
+  labels:
+    app: wordpress
+    type: frontend
+spec:
+  selector:
+    matchLabels:
+      app: wordpress
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        type: frontend
+    spec:
+      containers:
+        - name: wordpress
+          image: wordpress
+          ports:
+            - containerPort: 80
+              name: http-port
+            - containerPort: 443
+              name: https-port
+          env:
+            - name: WORDPRESS_DB_HOST
+              value: mariadb-service
+            - name: WORDPRESS_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: dbuser
+            - name: WORDPRESS_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: dbpassword
+            - name: WORDPRESS_DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: dbname
+~~~
+
+
+~~~
+debian@kubemaster:~$ kubectl create -f wp.yaml 
+deployment.apps/wordpress-deployment created
+~~~
+
+
+Fichero servicio NodePort que mapea el puerto 80 del contenedor con un puerto entre el 30000 y el 40000:
+~~~
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress-service
+  namespace: prueba
+  labels:
+    app: wordpress
+    type: frontend
+spec:
+  selector:
+    app: wordpress
+    type: frontend
+  ports:
+    - name: http-sv-port
+      port: 80
+      targetPort: http-port
+    - name: https-sv-port
+      port: 443
+      targetPort: https-port
+  type: NodePort
+~~~
+
+~~~
+debian@kubemaster:~$ kubectl create -f np-wp.yaml 
+service/wordpress-service created
+~~~
+
+Para ver las cositas:
+~~~
+debian@kubemaster:~$ kubectl get deploy,service,pods -n prueba
+NAME                                   READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/despliegue-mariadb     1/1     1            1           5m58s
+deployment.apps/wordpress-deployment   1/1     1            1           91s
+
+NAME                        TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
+service/mariadb-service     ClusterIP   10.106.210.49   <none>        3306/TCP                     6m39s
+service/wordpress-service   NodePort    10.98.186.187   <none>        80:32683/TCP,443:30137/TCP   29s
+
+NAME                                      READY   STATUS    RESTARTS   AGE
+pod/despliegue-mariadb-c5c79bc66-wfwhm    1/1     Running   0          5m58s
+pod/wordpress-deployment-9685c68b-kjxxd   1/1     Running   0          91s
+debian@kubemaster:~$ kubectl get services --namespace prueba
+NAME                TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
+mariadb-service     ClusterIP   10.106.210.49   <none>        3306/TCP                     7m22s
+wordpress-service   NodePort    10.98.186.187   <none>        80:32683/TCP,443:30137/TCP   72s
+~~~
+
+
+
 PASOS PARA CREAR VOLUMEN PERSITENTE PROBAR PRIMERO EN EL MASTER
 
 --------------------------
@@ -344,24 +567,202 @@ En primer lugar se necesita cierta configuración en el nodo master y los minion
 En el caso del nodo master:
 ~~~
 debian@kubemaster:~$ sudo apt install nfs-common nfs-kernel-server
-root@kubemaster:/home/debian# mkdir -p /home/shared/vol1
-root@kubemaster:/home/debian# echo "/home/shared/vol1 *(rw,sync,no_root_squash,no_all_squash)" >> /etc/exports
+root@kubemaster:/home/debian# mkdir -p /home/shared/volumen1 /home/shared/volumen2
+root@kubemaster:/home/debian# echo "/home/shared/volumen1 *(rw,sync,no_root_squash,no_all_squash)" >> /etc/exports
+root@kubemaster:/home/debian# echo "/home/shared/volumen2 *(rw,sync,no_root_squash,no_all_squash)" >> /etc/exports
 root@kubemaster:/home/debian# rm /lib/systemd/system/nfs-common.service
 root@kubemaster:/home/debian# systemctl daemon-reload
 root@kubemaster:/home/debian# chown -R systemd-coredump:root /home/shared
 root@kubemaster:/home/debian# systemctl restart nfs-kernel-server
 ~~~
 
+
+
 En los nodos:
 ~~~
 debian@kubeminion1:~$ sudo apt install -y nfs-common
 root@kubeminion1:/home/debian# rm /lib/systemd/system/nfs-common.service
 root@kubeminion1:/home/debian# systemctl daemon-reload
-root@kubeminion1:/home/debian# mkdir -p /var/data/vol1
-root@kubeminion1:/home/debian# mount -t nfs4 10.0.0.3:/home/shared/vol1 /var/data/vol1
+root@kubeminion1:/home/debian# mkdir -p /var/data/volumen1 /var/data/volumen2
+root@kubeminion1:/home/debian# mount -t nfs4 10.0.0.3:/home/shared/volumen1 /var/data/volumen1
+root@kubeminion1:/home/debian# mount -t nfs4 10.0.0.3:/home/shared/volumen2 /var/data/volumen2
 ~~~
 
-Fichero pv.yaml:
+
+Creación de volḿenes persistentes:
+~~~
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: volumen1
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Recycle
+  nfs:
+    path: /home/shared/volumen1
+    server: 10.0.0.3
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: volumen2
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Recycle
+  nfs:
+    path: /home/shared/volumen2
+    server: 10.0.0.3
+~~~
+
+Crear la llamada:
+~~~
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wordpress-pvc
+  namespace: prueba
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+~~~
+
+Deployment de mariadb definiendo el volumen:
+~~~
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mariadb-deployment
+  namespace: prueba
+  labels:
+    app: wordpress
+    type: database
+spec:
+  selector:
+    matchLabels:
+      app: wordpress
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        type: database
+    spec:
+      containers:
+        - name: wordpress
+          image: mariadb
+          ports:
+            - containerPort: 3306
+              name: db-port
+          env:
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: dbuser
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: dbname
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: dbpassword
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: dbrootpassword
+          volumeMounts: 
+            - name: volumen1
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: volumen1
+          persistentVolumeClaim:
+            claimName: mariadb-pvc
+~~~
+
+Creación del deployment de wordpress definiendo el volumen:
+~~~
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordpress-deployment
+  namespace: prueba
+  labels:
+    app: wordpress
+    type: frontend
+spec:
+  selector:
+    matchLabels:
+      app: wordpress
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        type: frontend
+    spec:
+      containers:
+        - name: wordpress
+          image: wordpress
+          ports:
+            - containerPort: 80
+              name: http-port
+            - containerPort: 443
+              name: https-port
+          env:
+            - name: WORDPRESS_DB_HOST
+              value: mariadb-service
+            - name: WORDPRESS_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: dbuser
+            - name: WORDPRESS_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: dbpassword
+            - name: WORDPRESS_DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: dbname
+          volumeMounts:
+            - name: volumen2
+              mountPath: /var/www/html
+      volumes:
+        - name: volumen2
+          persistentVolumeClaim:
+            claimName: wordpress-pvc
+~~~
+
+
+Ver cositas:
+~~~
+kubectl get deployment,service,pv,pvc,pods -n prueba
+~~~
+
+
+
+Probar:
+~~~
+kubectl get pods -n prueba
+kubectl delete pod -n wordpress mariadb-deployment-59f59b...
+
+
+Fichero pv.yaml para crear el volumen persistente:
 ~~~
 apiVersion: v1
 kind: PersistentVolume
@@ -382,7 +783,20 @@ spec:
 debian@kubemaster:~$ kubectl create -f pv.yaml
 persistentvolume/volumen1 created
 ~~~
---------------------------
+**************************************
+*
+*
+*
+*
+*
+*
+*
+
+
+--------------------------------------------------
+
+
+
 
 
 
