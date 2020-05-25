@@ -67,7 +67,7 @@ debian@kubemaster:~$ sudo chmod 644 /etc/kubernetes/admin.conf
 
 Desde el nodo cliente se va copiar el el fichero de configuración del master:
 ~~~
-export IP_MASTER=172.22.20.133
+export IP_MASTER=172.22.200.133
 debian@kubecliente:~$ sftp debian@${IP_MASTER}
 The authenticity of host '172.22.200.133 (172.22.200.133)' can't be established.
 ECDSA key fingerprint is SHA256:Y+knQJVp5El7mt7x/P3yI74ZhoAi2AF9fwIDsMEbhtU.
@@ -204,18 +204,29 @@ users:
 
 A continuación, se va a crear un contexto para el nodo y usuario cliente:
 ~~~
-debian@kubemaster:~$ kubectl config set-context kubecliente --cluster=kubernetes --user=kucliente
+debian@kubemaster:~$ kubectl config set-context kubecliente --cluster=kubernetes --user=kubecliente
 Context "kubecliente" created.
 ~~~
 
 Y se comprueba que se ha creado:
 ~~~
-debian@kubemaster:~$ kubectl config get-contexts
+debian@kubemaster:~/RBAC$ kubectl config get-contexts
 CURRENT   NAME                          CLUSTER      AUTHINFO           NAMESPACE
-          kubecliente                   kubernetes   kucliente          
-*         kubernetes-admin@kubernetes   kubernetes   kubernetes-admin   
+          kubecliente                   kubernetes   kubecliente        
+*         kubernetes-admin@kubernetes   kubernetes   kubernetes-admin 
 ~~~
 
+Se cambia el contexto:
+~~~
+debian@kubecliente:~$ kubectl config use-context kubecliente
+Switched to context "kubecliente".
+~~~
+
+Y se comprueba que se ha cambiado de contexto correctamente:
+~~~
+debian@kubecliente:~$ kubectl config current-context
+kubecliente
+~~~
 
 
 ## 2.3. Autorización RBAC
@@ -334,6 +345,71 @@ roleRef:
 
 
 ### 2.3.2. Caso práctico
+Para este caso práctico vamos a continuar con el contexto y usuario que se ha creado anteriormente: kubecliente. Con este usuario se va a desplegar una aplicación Wordpress, con una base de datos, sobre volúmenes persistentes. 
+
+Con este usuario no se puede hacer nada, ya que no tiene permisos para nada, ni en su propio namespace:
+~~~
+debian@kubecliente:~$ kubectl get pods -n kubecliente
+Error from server (Forbidden): pods is forbidden: User "kubecliente" cannot list resource "pods" in API group "" in the namespace "kubecliente"
+~~~
+
+Se van a establecer unas normas para que el usuario pueda utilizar este espacio de nombres, es decir, se va a crar un rol a través de un fichero de configuración que va a permitir, en el namespace correspondiente, unas funciones básicas, que son: ver y listar pods y ver, listar, crear, actualizar, borrar, etc. despliegues.
+~~~
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+    name: despliegue-kubecliente
+    namespace: kubecliente
+rules:
+ - apiGroups: ["*"]
+   resources: ["pods"]
+   verbs: ["list","get","watch"]
+ - apiGroups: ["extensions","apps"]
+   resources: ["deployments"]
+   verbs: ["get","list","watch","create","update","patch","delete"]
+~~~
+
+Y se aplica el rol:
+~~~
+debian@kubemaster:~/RBAC$ kubectl apply -f rol-despliegue-kubecliente.yaml 
+role.rbac.authorization.k8s.io/despliegue-kubecliente created
+~~~
+
+De esta forma se comprueba que se ha creado el rol en el namespace kubecliente:
+~~~
+debian@kubemaster:~/RBAC$ kubectl get role -n kubecliente
+NAME                     CREATED AT
+despliegue-kubecliente   2020-05-25T15:58:06Z
+~~~
+
+Tras a creación sel rol se asigna a un usuario, para ello se crea un objeto RoleBinding, configurado en un fichero con extensión yaml con la siguiente sintaxis:
+~~~
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: RBdespliegues-kubecliente
+  namespace: kubecliente
+subjects:
+- kind: User
+  name: kubecliente
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: despliegue-kubecliente
+  apiGroup: rbac.authorization.k8s.io
+~~~
+
+Y se aplica:
+~~~
+debian@kubemaster:~/RBAC$ kubectl apply -f despliegue-kubecliente.yaml 
+rolebinding.rbac.authorization.k8s.io/RBdespliegues-kubecliente created
+~~~
+
+Por último, se comprueba que el cliente puede ver los pods de su correspondiente espacio de nombres:
+~~~
+debian@kubecliente:~$ kubectl get pods -n kubecliente
+No resources found in kubecliente namespace.
+~~~
 *
 *
 *
@@ -348,7 +424,14 @@ roleRef:
 *
 *
 *
-*************probarlo otra vez, crear dos volúmenes y crear un nuevo namespace 
+*
+*
+*
+*
+*
+*
+
+VOY POR AQUÍ, tengo  que desplegar todo lo de abajo, poco a poco, e ir añadiendo roles y cositas
 ***************************************
 Fichero creación del servicio tipo ClusterIP que conecte mariadb con wordpress:
 ~~~
@@ -356,7 +439,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: mariadb-service
-  namespace: prueba
+  namespace: prueba-wp
   labels:
     app: wordpress
     type: database
@@ -375,55 +458,6 @@ debian@kubemaster:~$ kubectl create -f serv-maria.yaml
 service/mariadb-service created
 ~~~
 
-Se crea una estructura deploy para mariadb:
-~~~
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: despliegue-mariadb
-  namespace: prueba
-  labels:
-    app: wordpress
-    type: database
-spec:
-  selector:
-    matchLabels:
-      app: wordpress
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: wordpress
-        type: database
-    spec:
-      containers:
-        - name: mariadb
-          image: mariadb
-          ports:
-            - containerPort: 3306
-              name: db-port
-          env:
-            - name: MYSQL_USER
-              valueFrom:
-                secretKeyRef:
-                  name: mariadb-secret
-                  key: dbuser
-            - name: MYSQL_DATABASE
-              valueFrom:
-                secretKeyRef:
-                  name: mariadb-secret
-                  key: dbname
-            - name: MYSQL_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: mariadb-secret
-                  key: dbpassword
-            - name: MYSQL_ROOT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: mariadb-secret
-                  key: dbrootpassword
-~~~
 
 ~~~
 debian@kubemaster:~$ kubectl create -f mariadb.yaml 
@@ -443,62 +477,12 @@ kind: Secret
 metadata:
   creationTimestamp: null
   name: mariadb-secret
-  namespace: prueba
+  namespace: prueba-wp
 ~~~
 
 ~~~
 debian@kubemaster:~$ kubectl create -f secret.yaml 
 secret/mariadb-secret created
-~~~
-
-
-Fichero deply para wordpress:
-~~~
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: wordpress-deployment
-  namespace: prueba
-  labels:
-    app: wordpress
-    type: frontend
-spec:
-  selector:
-    matchLabels:
-      app: wordpress
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: wordpress
-        type: frontend
-    spec:
-      containers:
-        - name: wordpress
-          image: wordpress
-          ports:
-            - containerPort: 80
-              name: http-port
-            - containerPort: 443
-              name: https-port
-          env:
-            - name: WORDPRESS_DB_HOST
-              value: mariadb-service
-            - name: WORDPRESS_DB_USER
-              valueFrom:
-                secretKeyRef:
-                  name: mariadb-secret
-                  key: dbuser
-            - name: WORDPRESS_DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: mariadb-secret
-                  key: dbpassword
-            - name: WORDPRESS_DB_NAME
-              valueFrom:
-                secretKeyRef:
-                  name: mariadb-secret
-                  key: dbname
 ~~~
 
 
@@ -514,7 +498,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: wordpress-service
-  namespace: prueba
+  namespace: prueba-wp
   labels:
     app: wordpress
     type: frontend
@@ -539,22 +523,23 @@ service/wordpress-service created
 
 Para ver las cositas:
 ~~~
-debian@kubemaster:~$ kubectl get deploy,service,pods -n prueba
+debian@kubemaster:~/wordpress$ kubectl get deploy,service,pods -n prueba-wp
 NAME                                   READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/despliegue-mariadb     1/1     1            1           5m58s
-deployment.apps/wordpress-deployment   1/1     1            1           91s
+deployment.apps/despliegue-mariadb     1/1     1            1           115s
+deployment.apps/wordpress-deployment   1/1     1            1           45s
 
 NAME                        TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
-service/mariadb-service     ClusterIP   10.106.210.49   <none>        3306/TCP                     6m39s
-service/wordpress-service   NodePort    10.98.186.187   <none>        80:32683/TCP,443:30137/TCP   29s
+service/mariadb-service     ClusterIP   10.96.119.175   <none>        3306/TCP                     2m45s
+service/wordpress-service   NodePort    10.107.78.164   <none>        80:30512/TCP,443:30434/TCP   14s
 
 NAME                                      READY   STATUS    RESTARTS   AGE
-pod/despliegue-mariadb-c5c79bc66-wfwhm    1/1     Running   0          5m58s
-pod/wordpress-deployment-9685c68b-kjxxd   1/1     Running   0          91s
-debian@kubemaster:~$ kubectl get services --namespace prueba
+pod/despliegue-mariadb-c5c79bc66-jk8rl    1/1     Running   0          115s
+pod/wordpress-deployment-9685c68b-bdlpr   1/1     Running   0          45s
+
+debian@kubemaster:~/wordpress$ kubectl get services --namespace prueba-wp
 NAME                TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
-mariadb-service     ClusterIP   10.106.210.49   <none>        3306/TCP                     7m22s
-wordpress-service   NodePort    10.98.186.187   <none>        80:32683/TCP,443:30137/TCP   72s
+mariadb-service     ClusterIP   10.96.119.175   <none>        3306/TCP                     3m23s
+wordpress-service   NodePort    10.107.78.164   <none>        80:30512/TCP,443:30434/TCP   52s
 ~~~
 
 
@@ -567,9 +552,9 @@ En primer lugar se necesita cierta configuración en el nodo master y los minion
 En el caso del nodo master:
 ~~~
 debian@kubemaster:~$ sudo apt install nfs-common nfs-kernel-server
-root@kubemaster:/home/debian# mkdir -p /home/shared/volumen1 /home/shared/volumen2
-root@kubemaster:/home/debian# echo "/home/shared/volumen1 *(rw,sync,no_root_squash,no_all_squash)" >> /etc/exports
-root@kubemaster:/home/debian# echo "/home/shared/volumen2 *(rw,sync,no_root_squash,no_all_squash)" >> /etc/exports
+root@kubemaster:/home/debian# mkdir -p /home/shared/volumen5 /home/shared/volumen6
+root@kubemaster:/home/debian# echo "/home/shared/volumen5 *(rw,sync,no_root_squash,no_all_squash)" >> /etc/exports
+root@kubemaster:/home/debian# echo "/home/shared/volumen6 *(rw,sync,no_root_squash,no_all_squash)" >> /etc/exports
 root@kubemaster:/home/debian# rm /lib/systemd/system/nfs-common.service
 root@kubemaster:/home/debian# systemctl daemon-reload
 root@kubemaster:/home/debian# chown -R systemd-coredump:root /home/shared
@@ -583,18 +568,19 @@ En los nodos:
 debian@kubeminion1:~$ sudo apt install -y nfs-common
 root@kubeminion1:/home/debian# rm /lib/systemd/system/nfs-common.service
 root@kubeminion1:/home/debian# systemctl daemon-reload
-root@kubeminion1:/home/debian# mkdir -p /var/data/volumen1 /var/data/volumen2
-root@kubeminion1:/home/debian# mount -t nfs4 10.0.0.3:/home/shared/volumen1 /var/data/volumen1
-root@kubeminion1:/home/debian# mount -t nfs4 10.0.0.3:/home/shared/volumen2 /var/data/volumen2
+root@kubeminion1:/home/debian# mkdir -p /var/data/volumen5 /var/data/volumen6
+root@kubeminion1:/home/debian# mount -t nfs4 10.0.0.3:/home/shared/volumen5 /var/data/volumen5
+root@kubeminion1:/home/debian# mount -t nfs4 10.0.0.3:/home/shared/volumen6 /var/data/volumen6
 ~~~
 
+-------------------------------------------------
 
 Creación de volḿenes persistentes:
 ~~~
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: volumen1
+  name: volumen5
 spec:
   capacity:
     storage: 5Gi
@@ -602,13 +588,13 @@ spec:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Recycle
   nfs:
-    path: /home/shared/volumen1
+    path: /home/shared/volumen5
     server: 10.0.0.3
 ---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: volumen2
+  name: volumen6
 spec:
   capacity:
     storage: 5Gi
@@ -616,17 +602,17 @@ spec:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Recycle
   nfs:
-    path: /home/shared/volumen2
+    path: /home/shared/volumen6
     server: 10.0.0.3
 ~~~
 
-Crear la llamada:
+Crear la llamada wordpress:
 ~~~
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: wordpress-pvc
-  namespace: prueba
+  namespace: prueba-wp
 spec:
   accessModes:
     - ReadWriteMany
@@ -635,13 +621,29 @@ spec:
       storage: 5Gi
 ~~~
 
+Crear llamada maria:
+~~~
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mariadb-pvc
+  namespace: prueba-wp
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+~~~
+
+
 Deployment de mariadb definiendo el volumen:
 ~~~
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mariadb-deployment
-  namespace: prueba
+  namespace: prueba-wp
   labels:
     app: wordpress
     type: database
@@ -684,10 +686,10 @@ spec:
                   name: mariadb-secret
                   key: dbrootpassword
           volumeMounts: 
-            - name: volumen1
+            - name: volumen5
               mountPath: /var/lib/mysql
       volumes:
-        - name: volumen1
+        - name: volumen5
           persistentVolumeClaim:
             claimName: mariadb-pvc
 ~~~
@@ -697,8 +699,8 @@ Creación del deployment de wordpress definiendo el volumen:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: wordpress-deployment
-  namespace: prueba
+  name: despliegue-wp
+  namespace: prueba-wp
   labels:
     app: wordpress
     type: frontend
@@ -740,10 +742,10 @@ spec:
                   name: mariadb-secret
                   key: dbname
           volumeMounts:
-            - name: volumen2
+            - name: volumen6
               mountPath: /var/www/html
       volumes:
-        - name: volumen2
+        - name: volumen6
           persistentVolumeClaim:
             claimName: wordpress-pvc
 ~~~
@@ -751,14 +753,37 @@ spec:
 
 Ver cositas:
 ~~~
-kubectl get deployment,service,pv,pvc,pods -n prueba
+debian@kubemaster:~/prueba-wp$ kubectl get deployment,service,pv,pvc,pods -n prueba-wp
+NAME                                 READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/despliegue-wp        1/1     1            1           10s
+deployment.apps/mariadb-deployment   1/1     1            1           51s
+
+NAME                        TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                      AGE
+service/mariadb-service     ClusterIP   10.107.250.109   <none>        3306/TCP                     11m
+service/wordpress-service   NodePort    10.102.234.54    <none>        80:31501/TCP,443:32363/TCP   9m3s
+
+NAME                        CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS        CLAIM                     STORAGECLASS   REASON   AGE
+persistentvolume/volumen1   1Gi        RWX            Recycle          Terminating   prueba/nfs-pvc                                    4d21h
+persistentvolume/volumen2   5Gi        RWX            Recycle          Bound         prueba/wordpress-pvc                              2d22h
+persistentvolume/volumen3   5Gi        RWX            Recycle          Bound         wordpress/wordpress-pvc                           21m
+persistentvolume/volumen4   5Gi        RWX            Recycle          Bound         prueba-wp/wordpress-pvc                           21m
+persistentvolume/volumen5   5Gi        RWX            Recycle          Bound         prueba-wp/mariadb-pvc                             4m45s
+persistentvolume/volumen6   5Gi        RWX            Recycle          Available                                                       4m45s
+
+NAME                                  STATUS   VOLUME     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+persistentvolumeclaim/mariadb-pvc     Bound    volumen5   5Gi        RWX                           103s
+persistentvolumeclaim/wordpress-pvc   Bound    volumen4   5Gi        RWX                           2m6s
+
+NAME                                      READY   STATUS    RESTARTS   AGE
+pod/despliegue-wp-65d9cb48c4-bdw4q        1/1     Running   0          9s
+pod/mariadb-deployment-5fd66dbcc9-5pwwx   1/1     Running   0          51s
 ~~~
 
 
 
 Probar:
 ~~~
-kubectl get pods -n prueba
+kubectl get pods -n prueba-wp
 kubectl delete pod -n wordpress mariadb-deployment-59f59b...
 
 
@@ -791,132 +816,6 @@ persistentvolume/volumen1 created
 *
 *
 *
-
-
---------------------------------------------------
-
-
-
-
-
-
-ver volúmenes persistentes
-~~~
-kubectl get pv
-~~~
-
-
-definir un persistent volume claim, un fichero yaml:
-~~~
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-    name: nfs-pvc
-    namespace: prueba
-spec:
-    accessModes:
-        #indica que todos los nodos puedan escribir, escribir en el volumen
-        - ReadWriteMany
-    resources:
-        requests:
-            storage: 1Gi
-~~~
-
-Se crea el requerimiento del volumen:
-~~~
-kubectl create -f pvc.yaml
-~~~
-
-Para borrar el volumen:
-~~~
-kubectl delete pbc nombre_volumen
-~~~
-
-Despliegue de una imagen nginx con este volumen, en un .yaml:
-~~~
-apiVersion: v1
-kind: Pod
-metadata:
-  name: www-vol
-  namespaces: prueba
-spec:
-  containers:
-  - name: nginx
-    image: nginx
-    volumeMounts:
-      - mountPath: /usr/share/nginx/html
-        name: nfs-vol
-  volumes:
-    - name: nfs-vol
-      persistentVolumeClaim:
-        claimName: nfs-pvc
-~~~
-
-debian@kubemaster:~$ kubectl create -f pod-nginx.yaml 
-pod/www-vol created
-
-
-~~~
-apiVersion: extensions/v1beta1
-kind: Deployment
-metadata:
-    name: nginx
-    labels:
-        app: nginx
-spec:
-    template:
-        metadata:
-            labels:
-                app: nginx
-        spec:
-            containers:
-            - image: nginx
-              name: nginx
-              ports:
-              - name: http
-                containerPort: 80
-              volumeMounts:
-              - mountPath: /usr/share/nginx/html
-                name: nfs-vol
-            volumes:
-            - name: nfs-vol
-              persistentVolumeClaim:
-                claimName: nfs-pvc
-~~~
-
-Se despliega:
-~~~
-kubctl create -f nginc-deply.yaml
-~~~
-
-debian@kubemaster:~$ kubectl port-forward www-vol -n prueba 8080:80
-
-kubectl port-forward www-vol 8080:80
-Forwarding from 127.0.0.1:8080 -> 80
-Forwarding from [::1]:8080 -> 80
-
-
-
-
-
-Se crea el servicio para acceder a la aplicación:
-~~~
-kubectl expose deploy www-vol -n prueba --port=80 --type=NodePort
-~~~
-
-En el direcotrio /var/shared del master se guarda la información compartida con los nodos.
-Aquí se crea un index.html.
-
-***************************************
-
-
-
-
-
-
-
-
-
 
 
 
