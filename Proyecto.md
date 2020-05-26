@@ -410,36 +410,16 @@ Por último, se comprueba que el cliente puede ver los pods de su correspondient
 debian@kubecliente:~$ kubectl get pods -n kubecliente
 No resources found in kubecliente namespace.
 ~~~
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
 
-VOY POR AQUÍ, tengo  que desplegar todo lo de abajo, poco a poco, e ir añadiendo roles y cositas
-***************************************
-Fichero creación del servicio tipo ClusterIP que conecte mariadb con wordpress:
+El siguiente paso será crear un servicio tipo ClusterIP, que posteriormente conectará el pod encargado de la base de datos de MariaDB con el pod que alojará Wordpress.
+
+Para ello se crea un fichero .yaml con el siguiente contenido:
 ~~~
 apiVersion: v1
 kind: Service
 metadata:
   name: mariadb-service
-  namespace: prueba-wp
+  namespace: kubecliente
   labels:
     app: wordpress
     type: database
@@ -453,17 +433,117 @@ spec:
   type: ClusterIP
 ~~~
 
+Y se intenta crear el servicio:
 ~~~
-debian@kubemaster:~$ kubectl create -f serv-maria.yaml 
+debian@kubecliente:~/desp-wp$ kubectl create -f serv-clusterip.yaml 
+Error from server (Forbidden): error when creating "serv-clusterip.yaml": services is forbidden: User "kubecliente" cannot create resource "services" in API group "" in the namespace "kubecliente": RBAC: role.rbac.authorization.k8s.io "rol-despliegue-kubecliente" not found
+~~~
+
+El mensaje que aparece indica que este usuario no puede crear servicios en este espacio de nombres. Por lo tanto, a continuación, se van a crear dos reglas, una para ver los servicios y otra para crearlos. Estas dos reglas podrían crearse a la par, pero aquí la vamos a desgranar en dos roles.
+
+En primer lugar, desde el master, se creará un rol que permita ver los servicios que se han creado:
+~~~
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: get-serv-kubecliente
+  namespace: kubecliente
+rules:
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list", "watch"]
+~~~
+
+Y a través de otro fichero se asigna este nuevo rol al usuario:
+~~~
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: RBget-serv-kubecliente
+  namespace: kubecliente
+subjects:
+- kind: User
+  name: kubecliente
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: get-serv-kubecliente
+  apiGroup: rbac.authorization.k8s.io
+~~~
+
+Tras crear el rol y aplicar el RoleBinding se comprueba que ahora sí se pueden ver los servicios:
+~~~
+debian@kubecliente:~/desp-wp$ kubectl get services -n kubecliente
+No resources found in kubecliente namespace.
+~~~
+
+Lo siguiente será otorgarle los permisos para crear servicios en este namespace. Para ello, nuevamente se creará un rol con la siguiente configuración:
+~~~
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: crear-serv-kubecliente
+  namespace: kubecliente
+rules:
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["create","update","patch","delete"]
+~~~
+
+Y el correspondiente fichero, para aplicar la regla al usuario, es:
+~~~
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: RBcrear-serv-kubecliente
+  namespace: kubecliente
+subjects:
+- kind: User
+  name: kubecliente
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: crear-serv-kubecliente
+  apiGroup: rbac.authorization.k8s.io
+~~~
+
+Con estos roles creados y asignados, se vuelve a crear el servicio desde el cliente y se comprueba que se ha creado correctamente:
+~~~
+debian@kubecliente:~/desp-wp$ kubectl create -f serv-clusterip.yaml 
 service/mariadb-service created
+debian@kubecliente:~/desp-wp$ kubectl get services -n kubecliente
+NAME              TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+mariadb-service   ClusterIP   10.101.185.102   <none>        3306/TCP   64s
 ~~~
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*********Lo siguiente está redactado y sigo por el secreto
+
+Lo siguiente será crear un fichero donde se indican los datos para MariaDb que se guardarán en un secreto:
+~~~
+apiVersion: v1
+data:
+  dbname: ZGJfd29yZHByZXNz
+  dbpassword: ZGJfcGFzcw==
+  dbrootpassword: ZGJfcm9vdA==
+  dbuser: d3BfdXNlcg==
+kind: Secret
+metadata:
+  creationTimestamp: null
+  name: mariadb-secret
+  namespace: kubecliente
 
 
-~~~
-debian@kubemaster:~$ kubectl create -f mariadb.yaml 
-deployment.apps/despliegue-mariadb created
-~~~
 
+***************************************
 
 Fichero del secreto:
 ~~~
