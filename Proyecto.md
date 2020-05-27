@@ -515,19 +515,9 @@ debian@kubecliente:~/desp-wp$ kubectl get services -n kubecliente
 NAME              TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
 mariadb-service   ClusterIP   10.101.185.102   <none>        3306/TCP   64s
 ~~~
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*********Lo siguiente está redactado y sigo por el secreto
 
-Lo siguiente será crear un fichero donde se indican los datos para MariaDb que se guardarán en un secreto:
+Lo siguiente será crear un fichero donde se indican los datos para MariaDB
+ que se guardarán en un secreto:
 ~~~
 apiVersion: v1
 data:
@@ -540,45 +530,61 @@ metadata:
   creationTimestamp: null
   name: mariadb-secret
   namespace: kubecliente
-
-
-
-***************************************
-
-Fichero del secreto:
 ~~~
-apiVersion: v1
-data:
-  dbname: ZGJfd29yZHByZXNz
-  dbpassword: ZGJfcGFzcw==
-  dbrootpassword: ZGJfcm9vdA==
-  dbuser: d3BfdXNlcg==
-kind: Secret
+
+Al implementar este fichero aparece el siguiente error que indica que el usuario no tiene permisos para crear secretos:
+~~~
+debian@kubecliente:~/desp-wp$ kubectl create -f secret-mariadb.yaml 
+Error from server (Forbidden): error when creating "secret-mariadb.yaml": secrets is forbidden: User "kubecliente" cannot create resource "secrets" in API group "" in the namespace "kubecliente": RBAC: role.rbac.authorization.k8s.io "rol-despliegue-kubecliente" not found
+~~~
+
+A continuación, se creará un rol desde kubemaster que permita al usuario ver, crear, borrar, etc. secretos en el namespace kubecliente:
+~~~
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  creationTimestamp: null
-  name: mariadb-secret
-  namespace: prueba-wp
+    name: all-secrets-kubecliente
+    namespace: kubecliente
+rules:
+ - apiGroups: [""]
+   resources: ["secrets"]
+   verbs: ["get","list","watch","create","update","patch","delete"]
 ~~~
 
+Y se añade el rol al usuario:
 ~~~
-debian@kubemaster:~$ kubectl create -f secret.yaml 
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: RBaal-secrets-kubecliente
+  namespace: kubecliente
+subjects:
+- kind: User
+  name: kubecliente
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: all-secrets-kubecliente
+  apiGroup: rbac.authorization.k8s.io
+~~~
+
+Y desde el cliente ya te permite crear el secreto:
+~~~
+debian@kubecliente:~/desp-wp$ kubectl create -f secret-mariadb.yaml 
 secret/mariadb-secret created
+debian@kubecliente:~/desp-wp$ kubectl get secrets -n kubecliente
+NAME                  TYPE                                  DATA   AGE
+default-token-sqh67   kubernetes.io/service-account-token   3      2d1h
+mariadb-secret        Opaque                                4      3s
 ~~~
 
-
-~~~
-debian@kubemaster:~$ kubectl create -f wp.yaml 
-deployment.apps/wordpress-deployment created
-~~~
-
-
-Fichero servicio NodePort que mapea el puerto 80 del contenedor con un puerto entre el 30000 y el 40000:
+El siguiente fichero crea un servicio NodePort, es decir, que mapea el puerto 80 del contenedor a un puerto entre el 30000 y el 40000. Como se va a crear un servicio y este usuario tiene permisos para ello, Kubernetes permite realizar esta acción :
 ~~~
 apiVersion: v1
 kind: Service
 metadata:
   name: wordpress-service
-  namespace: prueba-wp
+  namespace: kubecliente
   labels:
     app: wordpress
     type: frontend
@@ -596,62 +602,21 @@ spec:
   type: NodePort
 ~~~
 
-~~~
-debian@kubemaster:~$ kubectl create -f np-wp.yaml 
-service/wordpress-service created
-~~~
+Este despliegue utiliza dos volúmenes persistentes que han sido creados con anterioridad por kubemaster. Para la creación de estos volúmenes se ha seguido una [guía propia](https://github.com/PalomaR88/Volumenes-persistentes-kubernetes/blob/master/Practica.md)
+*
+*
+*
+*
+*
+*
+***************sigo por aquí, que es en el otro repositorio, creando los volumenes persistentes
 
-Para ver las cositas:
-~~~
-debian@kubemaster:~/wordpress$ kubectl get deploy,service,pods -n prueba-wp
-NAME                                   READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/despliegue-mariadb     1/1     1            1           115s
-deployment.apps/wordpress-deployment   1/1     1            1           45s
-
-NAME                        TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
-service/mariadb-service     ClusterIP   10.96.119.175   <none>        3306/TCP                     2m45s
-service/wordpress-service   NodePort    10.107.78.164   <none>        80:30512/TCP,443:30434/TCP   14s
-
-NAME                                      READY   STATUS    RESTARTS   AGE
-pod/despliegue-mariadb-c5c79bc66-jk8rl    1/1     Running   0          115s
-pod/wordpress-deployment-9685c68b-bdlpr   1/1     Running   0          45s
-
-debian@kubemaster:~/wordpress$ kubectl get services --namespace prueba-wp
-NAME                TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
-mariadb-service     ClusterIP   10.96.119.175   <none>        3306/TCP                     3m23s
-wordpress-service   NodePort    10.107.78.164   <none>        80:30512/TCP,443:30434/TCP   52s
-~~~
-
-
+***************************************
 
 PASOS PARA CREAR VOLUMEN PERSITENTE PROBAR PRIMERO EN EL MASTER
 
 --------------------------
-En primer lugar se necesita cierta configuración en el nodo master y los minion para crear volúmenes persistentes.
 
-En el caso del nodo master:
-~~~
-debian@kubemaster:~$ sudo apt install nfs-common nfs-kernel-server
-root@kubemaster:/home/debian# mkdir -p /home/shared/volumen5 /home/shared/volumen6
-root@kubemaster:/home/debian# echo "/home/shared/volumen5 *(rw,sync,no_root_squash,no_all_squash)" >> /etc/exports
-root@kubemaster:/home/debian# echo "/home/shared/volumen6 *(rw,sync,no_root_squash,no_all_squash)" >> /etc/exports
-root@kubemaster:/home/debian# rm /lib/systemd/system/nfs-common.service
-root@kubemaster:/home/debian# systemctl daemon-reload
-root@kubemaster:/home/debian# chown -R systemd-coredump:root /home/shared
-root@kubemaster:/home/debian# systemctl restart nfs-kernel-server
-~~~
-
-
-
-En los nodos:
-~~~
-debian@kubeminion1:~$ sudo apt install -y nfs-common
-root@kubeminion1:/home/debian# rm /lib/systemd/system/nfs-common.service
-root@kubeminion1:/home/debian# systemctl daemon-reload
-root@kubeminion1:/home/debian# mkdir -p /var/data/volumen5 /var/data/volumen6
-root@kubeminion1:/home/debian# mount -t nfs4 10.0.0.3:/home/shared/volumen5 /var/data/volumen5
-root@kubeminion1:/home/debian# mount -t nfs4 10.0.0.3:/home/shared/volumen6 /var/data/volumen6
-~~~
 
 -------------------------------------------------
 
