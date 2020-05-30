@@ -605,16 +605,6 @@ spec:
 Este despliegue utiliza dos volúmenes persistentes que han sido creados con anterioridad por kubemaster. Para la creación de estos volúmenes se ha seguido una [guía propia](https://github.com/PalomaR88/Volumenes-persistentes-kubernetes/blob/master/Practica.md)
 
 En el máster se van a crear dos objetos de volúmenes persistentes con el siguiente fichero:
-*
-*
-*
-*
-*
-*
-*
-*
-******************Tengo que crear los volumenes en kubernetes, ya está preparado el master y los minions
-Creación de volḿenes persistentes:
 ~~~
 apiVersion: v1
 kind: PersistentVolume
@@ -644,6 +634,125 @@ spec:
     path: /home/shared/volumen8
     server: 10.0.0.3
 ~~~
+
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+****************VOY POR  AQUÍ. He preguntado por redmine si hago la llamada desde el master o desde el cliente.
+
+
+
+Y ahora se crean las peticiones de llamadas para los volúmenes peristentes desde el cliente. En primer lugar se crea la llamada de Wordpress con el siguiente fichero:
+~~~
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: clientewp-pvc
+  namespace: kubecliente
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+~~~
+
+----------------------- esto es si se hace desde el cliente. seguir por aquí o por otra vía-----------------------
+
+Cuando se crea la llamada aparece el correspondiente mensaje de error:
+~~~
+debian@kubecliente:~/desp-wp$ kubectl create -f PersVolClaim-xp.yaml 
+Error from server (Forbidden): error when creating "PersVolClaim-xp.yaml": persistentvolumeclaims is forbidden: User "kubecliente" cannot create resource "persistentvolumeclaims" in API group "" in the namespace "kubecliente": RBAC: role.rbac.authorization.k8s.io "rol-despliegue-kubecliente" not found
+~~~
+
+Desde el nodo master se va a crear un rol para otorgar permiso 
+~~~
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+    name: ver-PV-kubecliente
+    namespace: kubecliente
+rules:
+ - apiGroups: [""]
+   resources: ["persistentvolumes"]
+   resourceNames: ["volumen7","volumen8"]
+   verbs: ["list","watch"]
+ - apiGroups: ["storage.k8s.io"]
+   resources: ["storageclasses"]
+   verbs: ["list", "watch"]  
+~~~
+
+debian@kubemaster:~/RBAC$ kubectl create -f ver-PV-kubecliente.yaml 
+role.rbac.authorization.k8s.io/rol-ver-PV-kubecliente created
+
+
+Y se añade el rol al usuario:
+~~~
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: RBver-PV-kubecliente
+  namespace: kubecliente
+subjects:
+- kind: User
+  name: kubecliente
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: ver-PV-kubecliente
+  apiGroup: rbac.authorization.k8s.io
+~~~
+
+debian@kubemaster:~/RBAC$ kubectl create -f rol-ver-PV-kubecliente.yaml 
+rolebinding.rbac.authorization.k8s.io/RBver-PV-kubecliente created
+
+------------------------------------------------------------------
+
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+
+
+
+
+Y la llamada para MariaDB:
+~~~
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mariadb-pvc
+  namespace: prueba-wp
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+~~~
+
+
+
+******************
 
 Crear la llamada wordpress:
 ~~~
