@@ -603,29 +603,23 @@ spec:
 ~~~
 
 Este despliegue utiliza dos volúmenes persistentes que han sido creados con anterioridad por kubemaster. Para la creación de estos volúmenes se ha seguido una [guía propia](https://github.com/PalomaR88/Volumenes-persistentes-kubernetes/blob/master/Practica.md)
+
+En el máster se van a crear dos objetos de volúmenes persistentes con el siguiente fichero:
 *
 *
 *
 *
 *
 *
-***************sigo por aquí, que es en el otro repositorio, creando los volumenes persistentes
-
-***************************************
-
-PASOS PARA CREAR VOLUMEN PERSITENTE PROBAR PRIMERO EN EL MASTER
-
---------------------------
-
-
--------------------------------------------------
-
+*
+*
+******************Tengo que crear los volumenes en kubernetes, ya está preparado el master y los minions
 Creación de volḿenes persistentes:
 ~~~
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: volumen5
+  name: volumen7
 spec:
   capacity:
     storage: 5Gi
@@ -633,13 +627,13 @@ spec:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Recycle
   nfs:
-    path: /home/shared/volumen5
+    path: /home/shared/volumen57
     server: 10.0.0.3
 ---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: volumen6
+  name: volumen8
 spec:
   capacity:
     storage: 5Gi
@@ -647,7 +641,7 @@ spec:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Recycle
   nfs:
-    path: /home/shared/volumen6
+    path: /home/shared/volumen8
     server: 10.0.0.3
 ~~~
 
