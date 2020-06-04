@@ -635,22 +635,6 @@ spec:
     server: 10.0.0.3
 ~~~
 
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-****************VOY POR  AQUÍ. He preguntado por redmine si hago la llamada desde el master o desde el cliente.
-
-
-
 Y ahora se crean las peticiones de llamadas para los volúmenes peristentes desde el cliente. En primer lugar se crea la llamada de Wordpress con el siguiente fichero:
 ~~~
 apiVersion: v1
@@ -666,41 +650,73 @@ spec:
       storage: 5Gi
 ~~~
 
------------------------ esto es si se hace desde el cliente. seguir por aquí o por otra vía-----------------------
-
-Cuando se crea la llamada aparece el correspondiente mensaje de error:
+Pero no hay permisos para crear la llamada. 
 ~~~
-debian@kubecliente:~/desp-wp$ kubectl create -f PersVolClaim-xp.yaml 
-Error from server (Forbidden): error when creating "PersVolClaim-xp.yaml": persistentvolumeclaims is forbidden: User "kubecliente" cannot create resource "persistentvolumeclaims" in API group "" in the namespace "kubecliente": RBAC: role.rbac.authorization.k8s.io "rol-despliegue-kubecliente" not found
+debian@kubecliente:~/desp-wp$ kubectl get -f PersVolClaim-wp.yaml 
+Error from server (Forbidden): persistentvolumeclaims "clientewp-pvc" is forbidden: User "kubecliente" cannot get resource "persistentvolumeclaims" in API group "" in the namespace "kubecliente": RBAC: role.rbac.authorization.k8s.io "rol-despliegue-kubecliente" not found
 ~~~
 
-Desde el nodo master se va a crear un rol para otorgar permiso 
+Tampoco para ver los volúmenes:
+~~~
+debian@kubecliente:~/desp-wp$ kubectl get persistentvolume
+Error from server (Forbidden): persistentvolumes is forbidden: User "kubecliente" cannot list resource "persistentvolumes" in API group "" at the cluster scope
+~~~
+
+Ver volumenes:
+~~~
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: almacenamiento-kubecliente
+rules:
+- apiGroups: [""]
+  resources: ["persistentvolumes"]
+  verbs: ["get","list","watch","update"]
+~~~
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: almacenamiento-kubecliente
+rules:
+- apiGroups: [""]
+  resources: ["persistentvolumes"]
+  verbs: ["get","list","watch"]
+
+
+
+~~~
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: CRBalmacenamiento-kubecliente
+roleRef:
+  kind: ClusterRole
+  name: almacenamiento-kubecliente
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: User
+  name: kubecliente
+  apiGroup: rbac.authorization.k8s.io
+~~~
+
+
+hacer llamadas:
 ~~~
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-    name: ver-PV-kubecliente
+    name: all-PVClaim-kubecliente
     namespace: kubecliente
 rules:
  - apiGroups: [""]
-   resources: ["persistentvolumes"]
-   resourceNames: ["volumen7","volumen8"]
-   verbs: ["list","watch"]
- - apiGroups: ["storage.k8s.io"]
-   resources: ["storageclasses"]
-   verbs: ["list", "watch"]  
-~~~
-
-debian@kubemaster:~/RBAC$ kubectl create -f ver-PV-kubecliente.yaml 
-role.rbac.authorization.k8s.io/rol-ver-PV-kubecliente created
-
-
-Y se añade el rol al usuario:
-~~~
+   resources: ["persistentvolumeclaims"]
+   verbs: ["get","list","watch","create","update","delete"]
+---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: RBver-PV-kubecliente
+  name: RBall-PVClaim-kubecliente
   namespace: kubecliente
 subjects:
 - kind: User
@@ -708,15 +724,9 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: Role
-  name: ver-PV-kubecliente
+  name: all-PVClaim-kubecliente
   apiGroup: rbac.authorization.k8s.io
 ~~~
-
-debian@kubemaster:~/RBAC$ kubectl create -f rol-ver-PV-kubecliente.yaml 
-rolebinding.rbac.authorization.k8s.io/RBver-PV-kubecliente created
-
-------------------------------------------------------------------
-
 *
 *
 *
@@ -731,8 +741,9 @@ rolebinding.rbac.authorization.k8s.io/RBver-PV-kubecliente created
 *
 *
 *
-
-
+*
+*
+************************Pues por aquí voy, y me da fallo
 
 
 Y la llamada para MariaDB:
@@ -1053,6 +1064,16 @@ Pero no nos deja listar los jobs:
 kubepaloma@kubeprueba:~$ kubectl get jobs -n kubepaloma
 Error from server (Forbidden): jobs.batch is forbidden: User "kubepaloma" cannot list resource "jobs" in API group "batch" in the namespace "kubepaloma"
 ~~~
+*************************************************
+
+## quotas
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: object-counts
+spec:
+  hard:
+    persistentvolumeclaims: "4"
 
 # 3. Herramientas auxiliares
 Se ha investigado sobre dos herramientas auxiliares que facilite el manejo de usuarios y permisos en clusters de Kubernetes que son Elastickube y Klum.
