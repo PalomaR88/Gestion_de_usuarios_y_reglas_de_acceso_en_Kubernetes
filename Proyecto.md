@@ -602,22 +602,34 @@ spec:
   type: NodePort
 ~~~
 
-Este despliegue utiliza dos volúmenes persistentes que han sido creados con anterioridad por kubemaster. Para la creación de estos volúmenes se ha seguido una [guía propia](https://github.com/PalomaR88/Volumenes-persistentes-kubernetes/blob/master/Practica.md)
+Este despliegue utiliza dos volúmenes persistentes que han sido creados con anterioridad por kubemaster. Para la creación de estos volúmenes se ha seguido una [guía propia](https://github.com/PalomaR88/Volumenes-persistentes-kubernetes/blob/master/Practica.md).
 
-En el máster se van a crear dos objetos de volúmenes persistentes con el siguiente fichero:
+Además, se va a suminstrar almacenamiento dinámico desde el administrador al cliente para que pueda crear llamadas a los volúmnes asignados libremente. Para ello se crea un StorageClass con el siguiente fichero:
+~~~ 
+kind: StorageClass
+apiVersion: storage.k8s.io/v1beta1
+metadata:
+  name: vol-kubecliente
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-ssd
+~~~
+
+Con la clase de almacenamiento creada, se crean dos volúmenes con el siguiente fichero:
 ~~~
 apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: volumen7
 spec:
+  storageClassName: vol-kubecliente
   capacity:
     storage: 5Gi
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Recycle
   nfs:
-    path: /home/shared/volumen57
+    path: /home/shared/volumen7
     server: 10.0.0.3
 ---
 apiVersion: v1
@@ -625,6 +637,7 @@ kind: PersistentVolume
 metadata:
   name: volumen8
 spec:
+  storageClassName: vol-kubecliente
   capacity:
     storage: 5Gi
   accessModes:
@@ -635,6 +648,7 @@ spec:
     server: 10.0.0.3
 ~~~
 
+
 Y ahora se crean las peticiones de llamadas para los volúmenes peristentes desde el cliente. En primer lugar se crea la llamada de Wordpress con el siguiente fichero:
 ~~~
 apiVersion: v1
@@ -643,6 +657,7 @@ metadata:
   name: clientewp-pvc
   namespace: kubecliente
 spec:
+  storageClassName: vol-kubecliente
   accessModes:
     - ReadWriteMany
   resources:
@@ -662,6 +677,7 @@ debian@kubecliente:~/desp-wp$ kubectl get persistentvolume
 Error from server (Forbidden): persistentvolumes is forbidden: User "kubecliente" cannot list resource "persistentvolumes" in API group "" at the cluster scope
 ~~~
 
+
 Ver volumenes:
 ~~~
 apiVersion: rbac.authorization.k8s.io/v1
@@ -672,16 +688,12 @@ rules:
 - apiGroups: [""]
   resources: ["persistentvolumes"]
   verbs: ["get","list","watch","update"]
+- apiGroups: ["storage.k8s.io"]
+  resources:
+  - storageclasses
+  resourceNames: ["vol-kubecliente"]
+  verbs: ["get","list","watch","create","update","delete"]
 ~~~
-
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: almacenamiento-kubecliente
-rules:
-- apiGroups: [""]
-  resources: ["persistentvolumes"]
-  verbs: ["get","list","watch"]
 
 
 
@@ -727,23 +739,6 @@ roleRef:
   name: all-PVClaim-kubecliente
   apiGroup: rbac.authorization.k8s.io
 ~~~
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-************************Pues por aquí voy, y me da fallo
 
 
 Y la llamada para MariaDB:
@@ -752,8 +747,9 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: mariadb-pvc
-  namespace: prueba-wp
+  namespace: kubecliente
 spec:
+  storageClassName: vol-kubecliente
   accessModes:
     - ReadWriteMany
   resources:
@@ -761,39 +757,6 @@ spec:
       storage: 5Gi
 ~~~
 
-
-
-******************
-
-Crear la llamada wordpress:
-~~~
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: wordpress-pvc
-  namespace: prueba-wp
-spec:
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 5Gi
-~~~
-
-Crear llamada maria:
-~~~
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: mariadb-pvc
-  namespace: prueba-wp
-spec:
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 5Gi
-~~~
 
 
 Deployment de mariadb definiendo el volumen:
@@ -802,7 +765,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mariadb-deployment
-  namespace: prueba-wp
+  namespace: kubecliente
   labels:
     app: wordpress
     type: database
@@ -845,10 +808,10 @@ spec:
                   name: mariadb-secret
                   key: dbrootpassword
           volumeMounts: 
-            - name: volumen5
+            - name: volumen7
               mountPath: /var/lib/mysql
       volumes:
-        - name: volumen5
+        - name: volumen7
           persistentVolumeClaim:
             claimName: mariadb-pvc
 ~~~
@@ -859,7 +822,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: despliegue-wp
-  namespace: prueba-wp
+  namespace: kubecliente
   labels:
     app: wordpress
     type: frontend
@@ -901,179 +864,140 @@ spec:
                   name: mariadb-secret
                   key: dbname
           volumeMounts:
-            - name: volumen6
+            - name: volumen8
               mountPath: /var/www/html
       volumes:
-        - name: volumen6
+        - name: volumen8
           persistentVolumeClaim:
-            claimName: wordpress-pvc
+            claimName: clientewp-pvc
 ~~~
 
 
 Ver cositas:
 ~~~
-debian@kubemaster:~/prueba-wp$ kubectl get deployment,service,pv,pvc,pods -n prueba-wp
+debian@kubecliente:~/desp-wp$ kubectl get deployment,service,pv,pvc,pods -n kubecliente
 NAME                                 READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/despliegue-wp        1/1     1            1           10s
-deployment.apps/mariadb-deployment   1/1     1            1           51s
+deployment.apps/despliegue-wp        1/1     1            1           28s
+deployment.apps/mariadb-deployment   1/1     1            1           22h
 
 NAME                        TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                      AGE
-service/mariadb-service     ClusterIP   10.107.250.109   <none>        3306/TCP                     11m
-service/wordpress-service   NodePort    10.102.234.54    <none>        80:31501/TCP,443:32363/TCP   9m3s
+service/mariadb-service     ClusterIP   10.101.185.102   <none>        3306/TCP                     10d
+service/wordpress-service   NodePort    10.96.8.75       <none>        80:31358/TCP,443:30792/TCP   9d
 
-NAME                        CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS        CLAIM                     STORAGECLASS   REASON   AGE
-persistentvolume/volumen1   1Gi        RWX            Recycle          Terminating   prueba/nfs-pvc                                    4d21h
-persistentvolume/volumen2   5Gi        RWX            Recycle          Bound         prueba/wordpress-pvc                              2d22h
-persistentvolume/volumen3   5Gi        RWX            Recycle          Bound         wordpress/wordpress-pvc                           21m
-persistentvolume/volumen4   5Gi        RWX            Recycle          Bound         prueba-wp/wordpress-pvc                           21m
-persistentvolume/volumen5   5Gi        RWX            Recycle          Bound         prueba-wp/mariadb-pvc                             4m45s
-persistentvolume/volumen6   5Gi        RWX            Recycle          Available                                                       4m45s
+NAME                        CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS        CLAIM                       STORAGECLASS      REASON   AGE
+persistentvolume/volumen1   1Gi        RWX            Recycle          Terminating   prueba/nfs-pvc                                         16d
+persistentvolume/volumen2   5Gi        RWX            Recycle          Bound         prueba/wordpress-pvc                                   15d
+persistentvolume/volumen3   5Gi        RWX            Recycle          Bound         wordpress/wordpress-pvc                                12d
+persistentvolume/volumen4   5Gi        RWX            Recycle          Bound         prueba-wp/wordpress-pvc                                12d
+persistentvolume/volumen5   5Gi        RWX            Recycle          Bound         prueba-wp/mariadb-pvc                                  12d
+persistentvolume/volumen6   5Gi        RWX            Recycle          Bound         kubecliente/mariadb-pvc                                12d
+persistentvolume/volumen7   5Gi        RWX            Recycle          Bound         kubecliente/clientewp-pvc   vol-kubecliente            23h
+persistentvolume/volumen8   5Gi        RWX            Recycle          Available                                 vol-kubecliente            23h
 
-NAME                                  STATUS   VOLUME     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
-persistentvolumeclaim/mariadb-pvc     Bound    volumen5   5Gi        RWX                           103s
-persistentvolumeclaim/wordpress-pvc   Bound    volumen4   5Gi        RWX                           2m6s
+NAME                                  STATUS   VOLUME     CAPACITY   ACCESS MODES   STORAGECLASS      AGE
+persistentvolumeclaim/clientewp-pvc   Bound    volumen7   5Gi        RWX            vol-kubecliente   22h
+persistentvolumeclaim/mariadb-pvc     Bound    volumen6   5Gi        RWX                              22h
 
 NAME                                      READY   STATUS    RESTARTS   AGE
-pod/despliegue-wp-65d9cb48c4-bdw4q        1/1     Running   0          9s
-pod/mariadb-deployment-5fd66dbcc9-5pwwx   1/1     Running   0          51s
+pod/despliegue-wp-5bdd879496-2mm5m        1/1     Running   0          27s
+pod/mariadb-deployment-66dc948d55-t2jrm   1/1     Running   0          22h
 ~~~
 
 
 
 Probar:
 ~~~
-kubectl get pods -n prueba-wp
-kubectl delete pod -n wordpress mariadb-deployment-59f59b...
-
-
-Fichero pv.yaml para crear el volumen persistente:
-~~~
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: volumen1
-spec:
-  capacity:
-    storage: 1Gi
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Recycle
-  nfs:
-    path: /home/shared/vol1
-    server: 10.0.0.3
+debian@kubecliente:~/desp-wp$ kubectl get pods -n kubecliente
+NAME                                  READY   STATUS    RESTARTS   AGE
+despliegue-wp-5bdd879496-2mm5m        1/1     Running   0          98s
+mariadb-deployment-66dc948d55-t2jrm   1/1     Running   0          22h
 ~~~
 
-~~~
-debian@kubemaster:~$ kubectl create -f pv.yaml
-persistentvolume/volumen1 created
-~~~
-**************************************
-*
-*
-*
-*
-*
-*
-*
+Se crea un post de prueba en wordpress:
+![imga](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes.Elastickube./image/imga.png)
 
 
-
-**********************************************
-Se va a crear un espacio de nombre para que pueda trabajar el usuario.
+A continuación, se va a borrar el pod de maria. Se va a realizar a través del administrador ya que el usuario Kubecliente solo puede borrarlos a través de despliegues:
 ~~~
-kubepaloma@kubeprueba:~$ kubectl create namespace kubepaloma
-namespace/kubepaloma created
+debian@kubemaster:~$ kubectl delete pod mariadb-deployment-66dc948d55-t2jrm -n kubecliente
+pod "mariadb-deployment-66dc948d55-t2jrm" deleted
 ~~~
 
-Y se crea una RBAC a través de un fichero de configuración, en este caso se llama RBAC_kubepaloma.yaml con el siguiente contenido:
+Automáticamente se ha creado un nuevo pod:
 ~~~
-kind: Role
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-    name: kubepaloma
-    namespace: kubepaloma
-rules:
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: [""]
-  resources: ["jobs"]
-  verbs: ["watch", "create", "update", "patch", "delete"]
+debian@kubecliente:~/desp-wp$ kubectl get pods -n kubecliente
+NAME                                  READY   STATUS    RESTARTS   AGE
+despliegue-wp-5bdd879496-2mm5m        1/1     Running   0          12m
+mariadb-deployment-66dc948d55-jjcd4   1/1     Running   0          17s
 ~~~
 
-> La configuración del fichero no parece tener mucho sentido, pero es para ejemplificar.
+Y se comprueba que el post de prueba que se ha creado sigue desponible en la página de wordpress.
 
-En este caso se le va a otorgar permisos de realizar las acciones de get, list y watch los pods y de watch, create, update, patch y delete sobre los jobs.
+### 2.3.3. Cuotas de recursos
+Las cuotas de recursos es una herramienta para administrar los recursos del clúster.
 
-A continuación, se acplica el rol:
+Para ver las cuotas disponibles en un namespace:
 ~~~
-kubepaloma@kubeprueba:~$ kubectl apply -f RBAC_kubepaloma.yaml 
-role.rbac.authorization.k8s.io/kubepaloma created
-~~~
-
-Y se comprueba la creación del rol:
-~~~
-kubepaloma@kubeprueba:~$ kubectl get role -n kubepaloma
-NAME         CREATED AT
-kubepaloma   2020-04-22T15:46:25Z
+kubectl describe quota -n <namespace>
 ~~~
 
-Por último, hay que asignar el rol al usuario. Se va a realizar a través de un fichero yaml que llamaremos kubepaloma.yaml:
+Para ver la información detallada de las cuotas:
 ~~~
-kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: full-control
-  namespace: kubepaloma
-subjects:
-- kind: User
-  name: kubepaloma
-  apiGroup: rbac.authorization.k8s.io
-roleRef:
-  kind: Role
-  name: kubepaloma
-  apiGroup: rbac.authorization.k8s.io
+kubectl get resourcequota <nombre_cuota> --namespace=<namespace> --output=yaml
 ~~~
 
-Se aplica:
-~~~
-kubepaloma@kubeprueba:~$ kubectl apply -f kubepaloma.yaml
-rolebinding.rbac.authorization.k8s.io/full-control unchanged
-~~~
 
-Se va a comprobar si se ha realizado bien la RBAC. En primer lugar, se cambia de contexto:
+Un ejemplo de la sintaxis del fichero de configuración de las cuotas es la siguiente:
 ~~~
-kubepaloma@kubeprueba:~$ kubectl config use-context kubepaloma
-Switched to context "kubepaloma".
-~~~
-
-Vamos a listar por pods, algo que está permitido en el namespace kubepaloma:
-~~~
-kubepaloma@kubeprueba:~$ kubectl get pods
-Error from server (Forbidden): pods is forbidden: User "kubepaloma" cannot list resource "pods" in API group "" in the namespace "default"
-~~~
-
-No nos permita listar los pods, puesto que solo se tiene permiso en el namespace kubepaloma:
-~~~
-kubepaloma@kubeprueba:~$ kubectl get pods -n kubepaloma
-No resources found in kubepaloma namespace.
-~~~
-
-Pero no nos deja listar los jobs:
-~~~
-kubepaloma@kubeprueba:~$ kubectl get jobs -n kubepaloma
-Error from server (Forbidden): jobs.batch is forbidden: User "kubepaloma" cannot list resource "jobs" in API group "batch" in the namespace "kubepaloma"
-~~~
-*************************************************
-
-## quotas
 apiVersion: v1
 kind: ResourceQuota
 metadata:
-  name: object-counts
+  name: <nombre-cuota>
 spec:
   hard:
-    persistentvolumeclaims: "4"
+    [pods: "<nº>"]
+    [requests.cpu: "<nº>"]
+    [requests.memory: <nº>Gi]
+    [limits.cpu: "<nº>"]
+    [limits.memory: <nº>Gi]
+    [persistentvolumeclaims: "<nº>"]
+    [configmaps: "<nº>"]
+    [replicationcontrollers: "<nº>"]
+    [secrets: "<nº>"]
+    [services: "<nº>"]
+    [services.loadbalancers: "<nº>"]
+~~~
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+### 2.3.3.1. Caso práctico
+Se va a realizar un pequeño caso práctico ejemplificador en el mismo escenario que se ha utilizado en los ejercicios anteriores.
+
+Desde el administrador del clúster se crea el siguiente fichero:
+~~~
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: <nombre-cuota>
+spec:
+  hard:
+    pods: "3"
+    requests.cpu: "1"
+    limits.cpu: "2"
+~~~
 
 # 3. Herramientas auxiliares
 Se ha investigado sobre dos herramientas auxiliares que facilite el manejo de usuarios y permisos en clusters de Kubernetes que son Elastickube y Klum.
