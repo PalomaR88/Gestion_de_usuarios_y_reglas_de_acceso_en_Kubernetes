@@ -914,7 +914,7 @@ mariadb-deployment-66dc948d55-t2jrm   1/1     Running   0          22h
 ~~~
 
 Se crea un post de prueba en wordpress:
-![imga](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes/image/imga.png)
+![imga](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes/blob/master/image/imga.png)
 
 
 A continuación, se va a borrar el pod de maria. Se va a realizar a través del administrador ya que el usuario Kubecliente solo puede borrarlos a través de despliegues:
