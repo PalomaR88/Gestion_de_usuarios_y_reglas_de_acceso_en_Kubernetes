@@ -967,22 +967,8 @@ spec:
     [services: "<nº>"]
     [services.loadbalancers: "<nº>"]
 ~~~
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
+
+
 ### 2.3.3.1. Caso práctico
 Se va a realizar un pequeño caso práctico ejemplificador en el mismo escenario que se ha utilizado en los ejercicios anteriores.
 
@@ -1002,12 +988,113 @@ spec:
 # 3. Herramientas auxiliares
 Se ha investigado sobre dos herramientas auxiliares que facilite el manejo de usuarios y permisos en clusters de Kubernetes que son Elastickube y Klum.
 
-# 3.1. Elastickube
+## 3.1. Elastickube
 Esta herramienta se encuentra disponible en el [repositorio oficial](https://github.com/ElasticBox/elastickube.git). Tras la instalación se ha llegado a la siguiente conclusión: la herramienta está desactualizada y no es compatible con las nuevas versiones de Kubernetes. Además, en la instalación se han producido diferentes cambios en la configuración de kubernetes que hacen inservible el cluster. 
 
 
-# 3.2. Klum
+## 3.2. Klum
 Esta herramienta también se encuentra en su corresponddiente [repositorio oficial](https://github.com/ibuildthecloud/klum.git). Tras un primer acercamiento a esta herramienta se concluye que es muy nueva??(no me gusta este adjetivo, lo tengo que cambiar) lo que ocasiona que todavía no tiene ninguna utilizadad.
+
+## 3.3. Rakkess
+Rakkes es un proyecto que ayuda a conocer las autorizaciones que poseen los usuarios. El proyecto se ha descargado desde el [repositorio oficial del proyecto](https://github.com/corneliusweig/rakkess) donde se explican las diversas formas que instalación que ofrece. 
+
+Esta herramienta es muy intiutiva. Tras el binario **rakkess** se pueden utilizar las siguientes opciones:
+- **--verbs**: para indicar la acción o acciones.
+- **--namespace**/**-n**: para restringir la lista a un espacio de nombres.
+- **--verbosity**: establece el nivel de registro, por defecto es "warning". Se puede indicar "debug", "info", "warn", "error", "fatal", "panic".
+- **--sa**/**--as**: para establecer la cuenta de servicio. 
+
+
+En el siguiente ejemplo se recopila información sobre los permisos CREATE del usuario kubecliente en su namespace. 
+~~~
+debian@kubemaster:~$ rakkess -n kubecliente --as kubecliente --verbs create
+NAME                                            CREATE
+bindings                                        ✖
+configmaps                                      ✖
+controllerrevisions.apps                        ✖
+cronjobs.batch                                  ✖
+daemonsets.apps                                 ✖
+deployments.apps                                ✔
+endpoints                                       ✖
+endpointslices.discovery.k8s.io                 ✖
+events                                          ✖
+events.events.k8s.io                            ✖
+horizontalpodautoscalers.autoscaling            ✖
+ingresses.extensions                            ✖
+ingresses.networking.k8s.io                     ✖
+jobs.batch                                      ✖
+leases.coordination.k8s.io                      ✖
+limitranges                                     ✖
+localsubjectaccessreviews.authorization.k8s.io  ✖
+networkpolicies.networking.k8s.io               ✖
+persistentvolumeclaims                          ✔
+poddisruptionbudgets.policy                     ✖
+pods                                            ✖
+podtemplates                                    ✖
+replicasets.apps                                ✖
+replicationcontrollers                          ✖
+resourcequotas                                  ✖
+rolebindings.rbac.authorization.k8s.io          ✖
+roles.rbac.authorization.k8s.io                 ✖
+secrets                                         ✔
+serviceaccounts                                 ✖
+services                                        ✔
+statefulsets.apps                               ✖
+~~~
+
+En el siguiente ejemplo se lista los permisos de usuarios, grupos y cuentas de servicios sobre el recurso volúmenes persistentes. 
+~~~
+debian@kubemaster:~$ rakkess resource pv --namespace kubecliente
+NAME                            KIND            SA-NAMESPACE  LIST  CREATE  UPDATE  DELETE
+attachdetach-controller         ServiceAccount  kube-system   ✔     ✖       ✖       ✖
+expand-controller               ServiceAccount  kube-system   ✔     ✖       ✔       ✖
+generic-garbage-collector       ServiceAccount  kube-system   ✔     ✖       ✔       ✔
+horizontal-pod-autoscaler       ServiceAccount  kube-system   ✔     ✖       ✖       ✖
+kubecliente                     User                          ✔     ✖       ✔       ✖
+namespace-controller            ServiceAccount  kube-system   ✔     ✖       ✖       ✔
+persistent-volume-binder        ServiceAccount  kube-system   ✔     ✔       ✔       ✔
+pv-protection-controller        ServiceAccount  kube-system   ✔     ✖       ✔       ✖
+resourcequota-controller        ServiceAccount  kube-system   ✔     ✖       ✖       ✖
+system:kube-controller-manager  User                          ✔     ✖       ✖       ✖
+system:kube-scheduler           User                          ✔     ✖       ✔       ✖
+system:masters                  Group                         ✔     ✔       ✔       ✔
+~~~
+
+## 3.4. Kubect-who-can
+Este proyecto, cuya documento se encuentra en su [repositorio oficial](https://github.com/aquasecurity/kubectl-who-can) permite saber quiénes son los usuarios que pueden realizar una acción. Para su instalación se ha utilizado [krew](https://krew.sigs.k8s.io/docs/user-guide/quickstart/), una herramienta que permite instalar complementos de kubectl. 
+
+El siguiente ejemplo responde a la pregunta, ¿quién puede crear pods en el namespace kubecliente?:
+~~~
+debian@kubemaster:/tmp/tmp.t6yxdruWnR$ kubectl who-can create pods -n kubecliente
++ kubectl who-can create pods -n kubecliente
+No subjects found with permissions to create pods assigned through RoleBindings
+
+CLUSTERROLEBINDING                          SUBJECT                   TYPE            SA-NAMESPACE
+cluster-admin                               system:masters            Group           
+system:controller:daemon-set-controller     daemon-set-controller     ServiceAccount  kube-system
+system:controller:job-controller            job-controller            ServiceAccount  kube-system
+system:controller:persistent-volume-binder  persistent-volume-binder  ServiceAccount  kube-system
+system:controller:replicaset-controller     replicaset-controller     ServiceAccount  kube-system
+system:controller:replication-controller    replication-controller    ServiceAccount  kube-system
+system:controller:statefulset-controller    statefulset-controller    ServiceAccount  kube-system
+~~~
+
+## 3.5. rbac-lookup
+Este proyecto lista la relación de RBAC. De nuevo se ha utilizado krew para la instalación. La documentación se encuentra en el [repositorio oficial de Github](https://github.com/FairwindsOps/rbac-lookup).
+
+Es tan sencillo como usar el comando seguido del usuario:
+~~~
+debian@kubemaster:/tmp/tmp.t6yxdruWnR$ kubectl rbac-lookup kubecliente
++ kubectl rbac-lookup kubecliente
+SUBJECT        SCOPE          ROLE
+kubecliente    kubecliente    Role/all-secrets-kubecliente
+kubecliente    kubecliente    Role/all-PVClaim-kubecliente
+kubecliente    kubecliente    Role/crear-serv-kubecliente
+kubecliente    kubecliente    Role/despliegue-kubecliente
+kubecliente    kubecliente    Role/get-serv-kubecliente
+kubecliente    cluster-wide   ClusterRole/almacenamiento-kubecliente
+~~~
 
 
 https://kubernetes.io/docs/reference/access-authn-authz/rbac/
+https://www.adaltas.com/en/2019/08/07/users-rbac-kubernetes/
