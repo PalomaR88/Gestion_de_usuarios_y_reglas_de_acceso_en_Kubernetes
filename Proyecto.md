@@ -1118,56 +1118,78 @@ kubecliente    cluster-wide   ClusterRole/almacenamiento-kubecliente
 ~~~
 
 
-# Webgrafía
+# 6. Webgrafía
 > Para la elaboración de la webfragía se ha seguido el formato del estilo APA.
 
+AGEE, Hannah. (s.f.). *User is unable to list persistent volumes*. Docker success center. Recuperado el 2 de junio de 2020, de [https://success.docker.com/article/user-unable-to-list-persistent-volumes](https://success.docker.com/article/user-unable-to-list-persistent-volumes).
 
-MUÑOZ, José Domingo. (2018). *Desplegando una aplicación en Kubernetes*. PLEDIN 3.0. Recuperado el 12 de abril de 2020, de [https://www.josedomingo.org/pledin/2018/05/desplegando-una-aplicacion-en-kubernetes/](https://www.josedomingo.org/pledin/2018/05/desplegando-una-aplicacion-en-kubernetes/).
+AQUA eSOLUTIONS. (2020). *kubectl-who-can*. GitHub. Recuperado el 7 de junio de 2020, de [https://github.com/aquasecurity/kubectl-who-can/blob/master/README.md](https://github.com/aquasecurity/kubectl-who-can/blob/master/README.md).
 
-MUÑOZ, José Domingo. (2018). *Recursos de Kubernetes: Services*. PLEDIN 3.0. Recuperado el 12 de abril de 2020, de [https://www.josedomingo.org/pledin/2018/11/recursos-de-kubernetes-services/](https://www.josedomingo.org/pledin/2018/11/recursos-de-kubernetes-services/).
-
-MUÑOZ, José Domingo. (2019). *Kubernetes. Desplegando WordPress con MariaDB*. PLEDIN 3.0. Recuperado el 12 de abril de 2020, de [https://www.josedomingo.org/pledin/2019/03/kubernetes-wordpress/](https://www.josedomingo.org/pledin/2019/03/kubernetes-wordpress/).
-
-THE LINUX FOUNDATION. (2019). *Install and Set Up kubectl*. Kubernetes. Recuperado el 12 de abril de 2020, de [https://kubernetes.io/es/docs/tasks/tools/install-kubectl/#siguientes-pasos](https://kubernetes.io/es/docs/tasks/tools/install-kubectl/#siguientes-pasos).
+BITNAMI. (s.f.). *RBAC in Kubernetes*. Cloud Native Computing Foundation. Recuperado el 30 de mayo de 2020, de [https://www.cncf.io/wp-content/uploads/2018/07/RBAC-Online-Talk.pdf](https://www.cncf.io/wp-content/uploads/2018/07/RBAC-Online-Talk.pdf).
 
 CENTURYLINK. (2016). *ElasticKube - The Kubernetes Management Platform*. GitHub. Recuperado el 12 de abril de 2020, de [https://github.com/ElasticBox/elastickube/blob/master/README.md](https://github.com/ElasticBox/elastickube/blob/master/README.md).
 
-THE LINUX FOUNDATION. (2020). *Authenticating*. Kubernetes. Recuperado el 12 de abril de 2020, de [https://kubernetes.io/docs/reference/access-authn-authz/authentication/](https://kubernetes.io/docs/reference/access-authn-authz/authentication/).
-
-ORTIZ CARVAJAL, Juan Antonio. (2016). *ElasticKube, contenedor para el manejo empresarial de Kubernetes*. Adictos al trabajo. Recuperado el 12 de abril de 2020, de [https://www.adictosaltrabajo.com/2016/05/27/elastickube-contenedor-para-el-manejo-empresarial-de-kubernetes/](https://www.adictosaltrabajo.com/2016/05/27/elastickube-contenedor-para-el-manejo-empresarial-de-kubernetes/).
-
-MUÑOZ, José Domingo. (2018). *Instalación de kubernetes con kubeadm*. PLEDIN 3.0. Recuperado el 12 de abril de 2020, de [https://www.josedomingo.org/pledin/2018/05/instalacion-de-kubernetes-con-kubeadm/](https://www.josedomingo.org/pledin/2018/05/instalacion-de-kubernetes-con-kubeadm/).
-
-THE LINUX FOUNDATION. (2020). *Certificates*. Kubernetes. Recuperado el 12 de abril de 2020, de [https://kubernetes.io/docs/concepts/cluster-administration/certificates/](https://kubernetes.io/docs/concepts/cluster-administration/certificates/)
-
-RANCHER LABS, Inc. (2020). *Klum - Kubernetes Lazy User Manager*. GitHub. Recuperado el 12 de abril de 2020, de [https://github.com/ibuildthecloud/klum/blob/master/README.md](https://github.com/ibuildthecloud/klum/blob/master/README.md).
+FAIRWINDS. (2020). *RBAC LOOKUP*. GitHub. Recuperado el 7 de junio de 2020, de [https://github.com/FairwindsOps/rbac-lookup/blob/master/README.md](https://github.com/FairwindsOps/rbac-lookup/blob/master/README.md).
 
 IES GONZALO NAZARENO. (2020). *08-administracion_basica*. GitHub. Recuperado el 17 de abril de 2020, de [https://github.com/iesgn/talleres_asir_iesgn/blob/master/kubernetes/presentaciones/08-administracion_basica.pdf](https://github.com/iesgn/talleres_asir_iesgn/blob/master/kubernetes/presentaciones/08-administracion_basica.pdf).
 
 IES GONZALO NAZARENO. (2020). *09-Instalacion_paso_a_paso*. GitHub. Recuperado el 17 de abril de 2020, de [https://github.com/iesgn/talleres_asir_iesgn/blob/master/kubernetes/presentaciones/09-Instalacion_paso_a_paso.pdf](https://github.com/iesgn/talleres_asir_iesgn/blob/master/kubernetes/presentaciones/09-Instalacion_paso_a_paso.pdf).
 
-THE LINUX FOUNDATION. (2020). *Jobs - Run to Completion*. Kubernetes. Recuperado el 28 de abril de 2020, de [https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/](https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/)
+MUÑOZ, José Domingo. (2018). *Desplegando una aplicación en Kubernetes*. PLEDIN 3.0. Recuperado el 12 de abril de 2020, de [https://www.josedomingo.org/pledin/2018/05/desplegando-una-aplicacion-en-kubernetes/](https://www.josedomingo.org/pledin/2018/05/desplegando-una-aplicacion-en-kubernetes/).
 
-MUÑOZ, José Domingo. (2019) *Almacenamiento en Kubernetes. PersistentVolumen. PersistentVolumenClaims.* PLEDIN 3.0. Recuperado el 20 de mayo de 2020, de [https://www.josedomingo.org/pledin/2019/03/almacenamiento-kubernetes/](https://www.josedomingo.org/pledin/2019/03/almacenamiento-kubernetes/)
+MUÑOZ, José Domingo. (2018). *Instalación de kubernetes con kubeadm*. PLEDIN 3.0. Recuperado el 12 de abril de 2020, de [https://www.josedomingo.org/pledin/2018/05/instalacion-de-kubernetes-con-kubeadm/](https://www.josedomingo.org/pledin/2018/05/instalacion-de-kubernetes-con-kubeadm/).
 
-THE LINUX FOUNDATION. (2020). *Configurar un Pod para Usar un Volume como Almacenamiento*. Kubernetes. Recuperado el 20 de mayo de 2020, de [https://kubernetes.io/es/docs/tasks/configure-pod-container/configure-volume-storage/](https://kubernetes.io/es/docs/tasks/configure-pod-container/configure-volume-storage/)
+MUÑOZ, José Domingo. (2018). *Recursos de Kubernetes: Services*. PLEDIN 3.0. Recuperado el 12 de abril de 2020, de [https://www.josedomingo.org/pledin/2018/11/recursos-de-kubernetes-services/](https://www.josedomingo.org/pledin/2018/11/recursos-de-kubernetes-services/).
 
-THE LINUX FOUNDATION. (2020) *Role-based Access Control*. Helm. Recuperado el 16 de mayo de 2020, de [https://helm.sh/docs/topics/rbac/](https://helm.sh/docs/topics/rbac/).
+MUÑOZ, José Domingo. (2019) *Almacenamiento en Kubernetes. PersistentVolumen. PersistentVolumenClaims.* PLEDIN 3.0. Recuperado el 20 de mayo de 2020, de [https://www.josedomingo.org/pledin/2019/03/almacenamiento-kubernetes/](https://www.josedomingo.org/pledin/2019/03/almacenamiento-kubernetes/).
 
-Salmeron, Javier. (2018). *Demystifying RBAC in Kubernetes*. Cloud Native Computing Foundation. Recuperado el 16 de mayo de 2020, de [https://www.cncf.io/blog/2018/08/01/demystifying-rbac-in-kubernetes/](https://www.cncf.io/blog/2018/08/01/demystifying-rbac-in-kubernetes/).
+MUÑOZ, José Domingo. (2019). *Kubernetes. Desplegando WordPress con MariaDB*. PLEDIN 3.0. Recuperado el 12 de abril de 2020, de [https://www.josedomingo.org/pledin/2019/03/kubernetes-wordpress/](https://www.josedomingo.org/pledin/2019/03/kubernetes-wordpress/).
 
-THE LINUX FOUNDATION. (2020) *Using RBAC Authorization*. Kubernetes. Recuperado el 13 de mayo de 2020, de [https://kubernetes.io/docs/reference/access-authn-authz/rbac/](https://kubernetes.io/docs/reference/access-authn-authz/rbac/).
+ORTIZ CARVAJAL, Juan Antonio. (2016). *ElasticKube, contenedor para el manejo empresarial de Kubernetes*. Adictos al trabajo. Recuperado el 12 de abril de 2020, de [https://www.adictosaltrabajo.com/2016/05/27/elastickube-contenedor-para-el-manejo-empresarial-de-kubernetes/](https://www.adictosaltrabajo.com/2016/05/27/elastickube-contenedor-para-el-manejo-empresarial-de-kubernetes/).
+
+RANCHER LABS, Inc. (2020). *Klum - Kubernetes Lazy User Manager*. GitHub. Recuperado el 12 de abril de 2020, de [https://github.com/ibuildthecloud/klum/blob/master/README.md](https://github.com/ibuildthecloud/klum/blob/master/README.md).
+
+SALMERON, Javier. (2018). *Demystifying RBAC in Kubernetes*. Cloud Native Computing Foundation. Recuperado el 16 de mayo de 2020, de [https://www.cncf.io/blog/2018/08/01/demystifying-rbac-in-kubernetes/](https://www.cncf.io/blog/2018/08/01/demystifying-rbac-in-kubernetes/).
+
+THE LINUX FOUNDATION. (2016). *Dynamic Provisioning and Storage Classes in Kubernetes*. Kubernetes. Recuperado el 5 de junio de 2020, de [https://kubernetes.io/blog/2016/10/dynamic-provisioning-and-storage-in-kubernetes/](https://kubernetes.io/blog/2016/10/dynamic-provisioning-and-storage-in-kubernetes/).
+
+THE LINUX FOUNDATION. (2018). *Limit Storage Consumption*. Kubernetes. Recuperado el 4 de junio de 2020, de [https://kubernetes.io/docs/tasks/administer-cluster/limit-storage-consumption/](https://kubernetes.io/docs/tasks/administer-cluster/limit-storage-consumption/).
+
+THE LINUX FOUNDATION. (2019). *Access control*. Kubernetes. Recuperado el 30 de mayo de 2020, de [https://kubernetes.io/docs/tasks/configure-pod-container/configure-persistent-volume-storage/#access-control](https://kubernetes.io/docs/tasks/configure-pod-container/configure-persistent-volume-storage/#access-control).
+
+THE LINUX FOUNDATION. (2019). *Configure a Pod to Use a PersistentVolume for Storage*. Kubernetes. Recuperado el 30 de mayo de 2020, de [https://kubernetes.io/docs/tasks/configure-pod-container/configure-persistent-volume-storage/](https://kubernetes.io/docs/tasks/configure-pod-container/configure-persistent-volume-storage/).
 
 THE LINUX FOUNDATION. (2019). *Espacios de nombres*. Kubernetes. Recuperado el 5 de mayo de 2020, de [https://kubernetes.io/es/docs/concepts/overview/working-with-objects/namespaces/](https://kubernetes.io/es/docs/concepts/overview/working-with-objects/namespaces/).
 
+THE LINUX FOUNDATION. (2019). *Install and Set Up kubectl*. Kubernetes. Recuperado el 12 de abril de 2020, de [https://kubernetes.io/es/docs/tasks/tools/install-kubectl/#siguientes-pasos](https://kubernetes.io/es/docs/tasks/tools/install-kubectl/#siguientes-pasos).
 
-Autor, A. (Año). Ttulo del documento (cursiva). Nombre del sitio Web. Recuperado el fecha, de http://URL
-
-Biblioteca de la Universidad de Sevilla (2014). Guías de la BUS: Herramientas y guías para encontrar y gestionar la información. Recuperado el 12 noviembre 2014, de http://guiasbus.us.es/guias
-
+THE LINUX FOUNDATION. (2020). *API OVERVIEW*. Kubernetes. Recuperado el 5 de junio de 2020, de [https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#storageclass-v1-storage](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#storageclass-v1-storage).
 
 
+THE LINUX FOUNDATION. (2020). *Authenticating*. Kubernetes. Recuperado el 12 de abril de 2020, de [https://kubernetes.io/docs/reference/access-authn-authz/authentication/](https://kubernetes.io/docs/reference/access-authn-authz/authentication/).
 
+THE LINUX FOUNDATION. (2020). *Certificates*. Kubernetes. Recuperado el 12 de abril de 2020, de [https://kubernetes.io/docs/concepts/cluster-administration/certificates/](https://kubernetes.io/docs/concepts/cluster-administration/certificates/)
 
-https://kubernetes.io/docs/reference/access-authn-authz/rbac/
-https://www.adaltas.com/en/2019/08/07/users-rbac-kubernetes/
+THE LINUX FOUNDATION. (2020). *Configurar un Pod para Usar un Volume como Almacenamiento*. Kubernetes. Recuperado el 20 de mayo de 2020, de [https://kubernetes.io/es/docs/tasks/configure-pod-container/configure-volume-storage/](https://kubernetes.io/es/docs/tasks/configure-pod-container/configure-volume-storage/)
+
+THE LINUX FOUNDATION. (2020). *Configure Quotas for API Objects*. Kubernetes. Recuperado el 6 de junio de 2020, de [https://kubernetes.io/docs/tasks/administer-cluster/quota-api-object/](https://kubernetes.io/docs/tasks/administer-cluster/quota-api-object/).
+
+THE LINUX FOUNDATION. (2020). *Jobs - Run to Completion*. Kubernetes. Recuperado el 28 de abril de 2020, de [https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/](https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/)
+
+THE LINUX FOUNDATION. (2020). *Krew*. GitHub. Recuperado el 2 de junio de 2020, de [https://github.com/kubernetes-sigs/krew/blob/master/README.md](https://github.com/kubernetes-sigs/krew/blob/master/README.md).
+
+THE LINUX FOUNDATION. (2020). *Persistent Volumes*. Kubernetes. Recuperado el 30 de mayo de 2020, de [https://kubernetes.io/docs/concepts/storage/persistent-volumes/](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
+
+THE LINUX FOUNDATION. (2020). *Resource Quotas*. Kubernetes. Recuperado el 2 de junio de 2020, de [https://kubernetes.io/docs/concepts/policy/resource-quotas/](https://kubernetes.io/docs/concepts/policy/resource-quotas/).
+
+THE LINUX FOUNDATION. (2020) *Role-based Access Control*. Helm. Recuperado el 16 de mayo de 2020, de [https://helm.sh/docs/topics/rbac/](https://helm.sh/docs/topics/rbac/).
+
+THE LINUX FOUNDATION. (2020). *Storage Classes*. Kubernetes. Recuperado el 2 de junio de 2020, de [https://kubernetes.io/docs/concepts/storage/storage-classes/](https://kubernetes.io/docs/concepts/storage/storage-classes/).
+
+THE LINUX FOUNDATION. (2020). *Using Admission Controllers*. Kubernetes. Recuperado el 5 de junio de 2020, de [https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#defaultstorageclass](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#defaultstorageclass).
+
+THE LINUX FOUNDATION. (2020) *Using RBAC Authorization*. Kubernetes. Recuperado el 13 de mayo de 2020, de [https://kubernetes.io/docs/reference/access-authn-authz/rbac/](https://kubernetes.io/docs/reference/access-authn-authz/rbac/).
+
+THE LINUX FOUNDATION. (2020). *Volumes*. Kubernetes. Recuperado el 2 de junio de 2020, de [https://kubernetes.io/docs/concepts/storage/volumes/](https://kubernetes.io/docs/concepts/storage/volumes/).
+
+WEIG, Cornelius. (2020). *rakkess*. GitHub. Recuperado el 7 de junio de 2020, de [https://github.com/corneliusweig/rakkess/blob/master/README.md](https://github.com/corneliusweig/rakkess/blob/master/README.md).
