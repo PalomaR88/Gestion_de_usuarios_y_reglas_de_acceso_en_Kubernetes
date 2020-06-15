@@ -44,7 +44,7 @@ Para que los usuarios puedan ser autorizados para el acceso a la API se pasa por
 
 Los clúster de Kubernetes tienen un certificado, que suele estar autorfimado, y se incluyen en `$USER/.kube/config`. Este cerficado se escribe automáticamente cuando se crea un clúster y se puede compartir con otros usuarios.
 
-## 2.1. Autenticación
+## 3.1. Autenticación
 
 Hay dos categorías de usuarios en Kubernetes: cuentas administradas por Kubernetes y usuarios normales administrados por un servicio externo e independiente como Keystone, Coocle Accounts o una lista de ficheros.
 
@@ -54,7 +54,7 @@ Para autenticar las solicitudes de API Kubernetes utiliza certificados de client
 
 Se pueden habilitar varios métodos de autenticación a la vez.
 
-### 2.1.1. Certificados de cliente X509
+### 3.1.1. Certificados de cliente X509
 Se debe generar certificados desde la línea de comandos a través de **easyrsa**, **openssl** o **cfssl**. En esta tarea se explica la creación de certificados a través de **openssl**. 
 
 Estos certificados deben ser firmados por la clave y el certificado que proporciona Kubernetes. En el caso de tener instalado kubeadm, éstos, se encuentran en `/etc/kubernetes/pki/` y en minikube en `~/.minikube/`. También se pueden crear credenciales propias, para ello se necesita una entidad certificadora. 
@@ -90,7 +90,7 @@ Para comprobar los usuarios que se han creado:
 kubectl config view
 ~~~
 
-#### 2.1.1.1. Caso práctico de autenticación
+#### 3.1.1.1. Caso práctico de autenticación con certificado
 Se instala kubectl en el nodo cliente y desde el master se dan permiso de lectura al fichero `/etc/kubernetes/admin.conf`:
 ~~~
 debian@kubemaster:~$ sudo chmod 644 /etc/kubernetes/admin.conf
@@ -168,7 +168,12 @@ Fetching /home/debian/kubecliente.crt to kubecliente.crt
 sftp> exit
 ~~~
 
-## 2.2. Autorización
+### 3.1.2. Tokens
+#### 3.1.2.1. Caso práctico de autenticación con tokens
+
+
+
+## 3.2. Autorización
 Creación de usuario en el clúster con autenticación de certificados:
 ~~~
 kubectl config set-credentials <nombre_usuario> --client-certificate=<nombre_certificado>.crt --client-key=<nombre_clave>.key
@@ -194,7 +199,7 @@ Y para ver el contexto que se está usando:
 kubectl config current-context
 ~~~
 
-### 2.2.1. Caso práctico de autorización
+### 3.2.1. Caso práctico de autorización
 
 Se crea el usuario en el clúster:
 ~~~
@@ -257,10 +262,10 @@ kubecliente
 ~~~
 
 
-## 2.3. Autorización RBAC y Quotas
+## 3.3. Autorización RBAC y Quotas
 El **control de acceso basado en roles** (RBAC) es un método para regular el acceso a los recursos en función de los roles de los usuarios. Para ello utiliza **rbac.authorization.k8s.io** que permite configurar dinámicamente políticas a través de la API de Kubernetes. 
 
-### 2.3.1. Objetos API
+### 3.3.1. Objetos API
 La API RBAC declara cuatro tipos de objetos: Role, ClusterRole, RoleBinding y ClusterRoleBinding. Para trabajar con estos objetos, como todos los objetos de Kubernetes, se debe usar la API de Kubernetes. 
 
 Los objetos de Kubernetes son entidades persistentes en el sistema de Kubernetes que se usan para representar el estado del cluster. Pueden describir:
@@ -269,7 +274,7 @@ Los objetos de Kubernetes son entidades persistentes en el sistema de Kubernetes
 - Los recursos disponibles para esas aplicaciones. 
 - Las políticas sobre cómo se comportan esas aplicaciones (renicio, actualizaciones, tolerancia a fallos, etc.).
 
-#### 2.3.1.1. Role y ClusterRole
+#### 3.3.1.1. Role y ClusterRole
 Un Role RBAC o ClusterRole contiene reglas que representan un conjunto de permisos siendo estos aditivos, es decir, no se usan reglas de negación. 
 
 En el caso de Role RBAC se establecen permisos dentro de un namespace particular, mientras que los ClusterRole permite definir un mismo rol en todo el cluster.
@@ -330,7 +335,7 @@ rules:
    verbs: ["get","list","watch","create","update","patch","delete"]
 ~~~
 
-#### 2.3.1.2. RoleBinding y ClusterRoleBinding
+#### 3.3.1.2. RoleBinding y ClusterRoleBinding
 
 RoleBinding o ClusterRoleBinding otorga los permisos definidos en un rol a un usuario o cuentas de servicios, **ServiceAccount**. RoleBinding otorga permisos dentro de un namespace específico, mientras que un ClusterRoleBinding otorga acceso a todo el cluster.
 
@@ -406,7 +411,7 @@ spec:
 ...
 ~~~
 
-### 2.3.3. Caso práctico de autorización RBAC
+### 3.3.3. Caso práctico de autorización RBAC y Quotas
 
 Para este caso práctico vamos a continuar con el contexto y usuario que se ha creado anteriormente: kubecliente. Con este usuario se va a desplegar una aplicación Wordpress, con una base de datos, sobre volúmenes persistentes. 
 
@@ -1044,17 +1049,17 @@ Y se comprueba que el post de prueba que se ha creado sigue disponible en la pá
 
 
 
-# 3. Herramientas auxiliares
+# 4. Herramientas auxiliares
 Se ha investigado varias herramientas auxiliares que facilite el manejo de usuarios y permisos en clusters de Kubernetes.
 
-## 3.1. Elastickube
+## 4.1. Elastickube
 Esta herramienta se encuentra disponible en el [repositorio oficial](https://github.com/ElasticBox/elastickube.git). Tras la instalación se ha llegado a la siguiente conclusión: la herramienta está desactualizada y no es compatible con las nuevas versiones de Kubernetes. Además, en la instalación se han producido diferentes cambios en la configuración de kubernetes que hacen inservible el cluster. 
 
 
-## 3.2. Klum
+## 4.2. Klum
 Esta herramienta también se encuentra en su corresponddiente [repositorio oficial](https://github.com/ibuildthecloud/klum.git). Tras un primer acercamiento a esta herramienta se concluye que es muy reciente, lo que ocasiona que todavía no tiene ninguna utilidad.
 
-## 3.3. Rakkess
+## 4.3. Rakkess
 Rakkes es un proyecto que ayuda a conocer las autorizaciones que poseen los usuarios. El proyecto se ha descargado desde el [repositorio oficial del proyecto](https://github.com/corneliusweig/rakkess) donde se explican las diversas formas de instalación que ofrece. 
 
 Esta herramienta es muy intiutiva. Tras el binario **rakkess** se pueden utilizar las siguientes opciones:
@@ -1122,7 +1127,7 @@ system:kube-scheduler           User                          ✔     ✖       
 system:masters                  Group                         ✔     ✔       ✔       ✔
 ~~~
 
-## 3.4. Kubect-who-can
+## 4.4. Kubect-who-can
 Este proyecto, cuya documento se encuentra en su [repositorio oficial](https://github.com/aquasecurity/kubectl-who-can), permite saber quiénes son los usuarios que pueden realizar una acción. Para su instalación se ha utilizado [krew](https://krew.sigs.k8s.io/docs/user-guide/quickstart/), una herramienta que permite instalar complementos de kubectl. 
 
 El siguiente ejemplo responde a la pregunta, ¿quién puede crear pods en el namespace kubecliente?
@@ -1142,7 +1147,7 @@ system:controller:replication-controller    replication-controller    ServiceAcc
 system:controller:statefulset-controller    statefulset-controller    ServiceAccount  kube-system
 ~~~
 
-## 3.5. rbac-lookup
+## 4.5. rbac-lookup
 Este proyecto lista la relación de RBAC. De nuevo se ha utilizado krew para la instalación. La documentación se encuentra en el [repositorio oficial de Github](https://github.com/FairwindsOps/rbac-lookup).
 
 Es tan sencillo como usar el comando seguido del usuario:
@@ -1158,8 +1163,10 @@ kubecliente    kubecliente    Role/get-serv-kubecliente
 kubecliente    cluster-wide   ClusterRole/almacenamiento-kubecliente
 ~~~
 
+# 5. Siguientes pasos
+# 6. Conclusiones
 
-# 6. Webgrafía
+# 7. Webgrafía
 > Para la elaboración de la webfragía se ha seguido el formato del estilo APA.
 
 AGEE, Hannah. (s.f.). *User is unable to list persistent volumes*. Docker success center. Recuperado el 2 de junio de 2020, de [https://success.docker.com/article/user-unable-to-list-persistent-volumes](https://success.docker.com/article/user-unable-to-list-persistent-volumes).
