@@ -1,6 +1,14 @@
 # 1. Introducción
 
-AQUI VA LA INTRODUCCIÓN
+Kubernetes es el orquestador de contenedores más utilizado en la actualidad. Una de las claves de su éxito es la configuración que ofrece. Y un punto fundamental para cualquier administrador de sitemas pasa por saber administrar los usuarios que utilizarán nuestro cluster. 
+
+El presente proyecto integrado trata la gestión de los usuarios en Kubernetes y la aplicación de permisos a los mismo, para poder admnistrar correctamente un cluster.
+
+El documento se divide en dos partes principales. La primera sobre el control de la API, se divide a su vez en **autenticación** donde se explica algunas de las diversas formas que Kubernetes utiliza para autenticar a los usuario. **Autorización** se explica cómo Kubernetes permite a un usuario formar parte del cluster. Por último, se explica la concesión de permisos a través de **RBAC** y el control de los recursos a través de **Quotas**.
+
+La segunda parte del documento aborda algunas herramientas complementarias que pueden ser de utilidad para la gestión de usuarios.
+
+Para ilustrar todas estas ideas las partes del trabajo se componen de una introducción teórica donde se explican los conceptos más importantes y un caso práctico que ayudará a consolidar la parte teórica y comprenderla.
 
 # 2. Creación del escenario y recomendaciones
 
@@ -33,9 +41,6 @@ Los puertos necesarios que vamos a abrir para este proyecto son los siguientes:
 
 
 # 3. Control de acceso a la API
-
-HAY QUE CAMBIAR LOS PUNTOS DE TODOS
-
 Para que los usuarios puedan ser autorizados para el acceso a la API se pasa por 3 etapas: 
 
 1. Autenticación
@@ -1164,7 +1169,19 @@ kubecliente    cluster-wide   ClusterRole/almacenamiento-kubecliente
 ~~~
 
 # 5. Siguientes pasos
+
+Este proyecto abarca los pilares fundamentales para comprender la administración y gestión de usuarios en Kubernetes pero se podría profundizar más en algunos aspectos que aquí se han explicado como las quotas o el establecimiento de permisos a través de grupos de usuarios. 
+
+Una práctica muy interesante sería la realización de un script para crear usuarios de forma automática, incluso la creación automatizada de usuarios con un perfiles definidos. También, se podría indagar sobre las diferencias en la administración de usuarios y permisos en proveedores como Google, Amazon, Azure, etc. u otras plataformas como OpenShift. 
+
+
 # 6. Conclusiones
+
+Con la información recopilada en este docuemnto se puede concluir que la característica principal de la administración de usuarios y permisos en Kubernetes es la versatilidad que ofrece. Pudiendo desgranar las opciones según las necesidades. Siendo, además, muy sencillo de estandarizar. 
+
+Como se dijo en la introducción, este es un trabajo fundamental para un administrador de sistemas, pero se ha observado que no sólo es necesario el conocimiento sobre usuarios y permisos, sino que para realizar una correccta gestión se debe tener unos conocimientos mínimos sobre el funcionamiento de la API y los objetos del sistema. 
+
+
 
 # 7. Webgrafía
 > Para la elaboración de la webfragía se ha seguido el formato del estilo APA.
