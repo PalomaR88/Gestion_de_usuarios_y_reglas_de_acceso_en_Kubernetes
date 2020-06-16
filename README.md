@@ -8,7 +8,7 @@
 
 ## [3. Control de acceso a la API](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes/blob/master/Proyecto.md#3-control-de-acceso-a-la-api)
 
-### [   3.1. Autenticación](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes/blob/master/Proyecto.md#31-autenticaci%C3%B3n)
+### [- 3.1. Autenticación](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes/blob/master/Proyecto.md#31-autenticaci%C3%B3n)
 #### [3.1.1. Certificados de cleintes X509](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes/blob/master/Proyecto.md#311-certificados-de-cliente-x5099)
 ##### [3.1.1.1. Caso práctico de autenticación con certificado](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes/blob/master/Proyecto.md#3111-caso-pr%C3%A1ctico-de-autenticaci%C3%B3n-con-certificado)
 
