@@ -169,10 +169,6 @@ users:
     client-key-data: REDACTED
 ~~~
 
-### 3.1.2. Tokens
-#### 3.1.2.1. Caso práctico de autenticación con tokens
-
-
 
 ## 3.2. Autorización
 Para ejecutar comandos con un usuario concreto se utilizan los **contextos**. Para ver los contextos existentes se utiliza la siguiente orden:
