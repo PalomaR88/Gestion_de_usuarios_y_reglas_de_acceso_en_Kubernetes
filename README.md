@@ -1,7 +1,7 @@
 # [Gestión de usuarios y reglas de acceso en Kubernetes](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes/blob/master/Proyecto.md#gesti%C3%B3n-de-usuarios-y-reglas-de-acceso-en-kubernetes)
 
 ## [1. Instroducción](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes/blob/master/Proyecto.md#1-introducci%C3%B3n)
-
+---
 
 ## [2. Creación del escenario](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes/blob/master/Proyecto.md#2-creaci%C3%B3n-del-escenario-y-recomendaciones)
 
