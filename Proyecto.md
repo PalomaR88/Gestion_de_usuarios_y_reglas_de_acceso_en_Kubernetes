@@ -2,7 +2,7 @@
 
 Kubernetes es el orquestador de contenedores más utilizado en la actualidad. Una de las claves de su éxito es la configuración que ofrece. Y un punto fundamental para cualquier administrador de sitemas pasa por saber administrar los usuarios que utilizarán nuestro cluster. 
 
-El presente proyecto integrado trata la gestión de los usuarios en Kubernetes y la aplicación de permisos a los mismo, para poder admnistrar correctamente un cluster.
+El presente proyecto integrado trata la gestión de los usuarios en Kubernetes y la aplicación de permisos a los mismo, para poder administrar correctamente un cluster.
 
 El documento se divide en dos partes principales. La primera sobre el control de la API, se divide a su vez en **autenticación** donde se explica algunas de las diversas formas que Kubernetes utiliza para autenticar a los usuario. **Autorización** se explica cómo Kubernetes permite a un usuario formar parte del cluster. Por último, se explica la concesión de permisos a través de **RBAC** y el control de los recursos a través de **Quotas**.
 
@@ -51,7 +51,7 @@ Los clúster de Kubernetes tienen un certificado, que suele estar autorfimado, y
 
 ## 3.1. Autenticación
 
-Hay dos categorías de usuarios en Kubernetes: cuentas administradas por Kubernetes y usuarios normales administrados por un servicio externo e independiente como Keystone, Coocle Accounts o una lista de ficheros.
+Hay dos categorías de usuarios en Kubernetes: cuentas administradas por Kubernetes y usuarios normales administrados por un servicio externo e independiente como Keystone, Google Accounts o una lista de ficheros.
 
 Aquí se trabajará con las cuentas administradas por Kubernetes. Se crean automáticamente por el servidor API o manualmente a través de una llamada. Éstas están vinculadas a un conjunto de credenciales almacenadas como Secrets.
 
@@ -96,45 +96,6 @@ kubectl config view
 ~~~
 
 #### 3.1.1.1. Caso práctico de autenticación con certificado
-Se instala kubectl en el nodo cliente y desde el master se dan permiso de lectura al fichero `/etc/kubernetes/admin.conf`:
-~~~
-debian@kubemaster:~$ sudo chmod 644 /etc/kubernetes/admin.conf
-~~~
-
-Desde el nodo cliente se va copiar el fichero de configuración del master:
-~~~
-debian@kubecliente:~$ export IP_MASTER=172.22.200.133
-debian@kubecliente:~$ sftp debian@${IP_MASTER}
-The authenticity of host '172.22.200.133 (172.22.200.133)' can't be established.
-ECDSA key fingerprint is SHA256:Y+knQJVp5El7mt7x/P3yI74ZhoAi2AF9fwIDsMEbhtU.
-Are you sure you want to continue connecting (yes/no)? yes
-Warning: Permanently added '172.22.200.133' (ECDSA) to the list of known hosts.
-debian@172.22.200.133's password: 
-Connected to debian@172.22.200.133.
-sftp> get /etc/kubernetes/admin.conf
-Fetching /etc/kubernetes/admin.conf to admin.conf
-/etc/kubernetes/admin.conf                       100% 5444     1.4MB/s   00:00    
-sftp> exit
-~~~
-
-Y se crea el directorio `.kube` para alojar el fichero de configuración:
-~~~
-debian@kubecliente:~$ mkdir .kube
-debian@kubecliente:~$ mv admin.conf ~/.kube/mycluster.conf
-debian@kubecliente:~$ sed -i -e "s#server: https://.*:6443#server: https://${IP_MASTER}:6443#g" ~/.kube/mycluster.conf
-debian@kubecliente:~$ export KUBECONFIG=~/.kube/mycluster.conf
-~~~
-
-
-Finalmente se comprueba que funciona correctamente:
-~~~
-debian@kubecliente:~$ kubectl cluster-info
-Kubernetes master is running at https://172.22.200.133:6443
-KubeDNS is running at https://172.22.200.133:6443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
-~~~
-
-En estos momentos, el nodo cliente funciona como el administrador porque se ha copiado el fichero de configuración sin configurar adecuadamente. El siguiente paso es la creación del usuario y la configuración: 
-
 Se genera la clave y la petición de firma:
 ~~~
 debian@kubecliente:~$ openssl genrsa -out kubecliente.key 2048
@@ -147,6 +108,7 @@ debian@kubecliente:~$ openssl req -new -key kubecliente.key -out kubecliente.csr
 
 Se envía la petición de firma al nodo master para que se cree el certificado:
 ~~~
+debian@kubecliente:~$ export IP_MASTER=172.22.200.133
 debian@kubecliente:~$ scp kubecliente.csr debian@${IP_MASTER}:
 debian@172.22.200.133's password: 
 kubecliente.csr                                  100%  920   554.1KB/s   00:00 
@@ -172,39 +134,6 @@ Fetching /home/debian/kubecliente.crt to kubecliente.crt
 /home/debian/kubecliente.crt                     100% 1021   302.5KB/s   00:00    
 sftp> exit
 ~~~
-
-### 3.1.2. Tokens
-#### 3.1.2.1. Caso práctico de autenticación con tokens
-
-
-
-## 3.2. Autorización
-Creación de usuario en el clúster con autenticación de certificados:
-~~~
-kubectl config set-credentials <nombre_usuario> --client-certificate=<nombre_certificado>.crt --client-key=<nombre_clave>.key
-~~~
-
-Para ejecutar comando con un usuario concreto se utilizan los **contextos**. Para ver los contextos existentes se utiliza la siguiente orden:
-~~~
-kubectl config get-contexts  
-~~~
-
-Para crear un contexto:
-~~~
-kubectl config set-context <contexto> --cluster=<nombre_cluster> --user=<usuario>
-~~~
-
-Para cambiar el contexto:
-~~~
-kubectl config use-context <contexto>
-~~~
-
-Y para ver el contexto que se está usando:
-~~~
-kubectl config current-context
-~~~
-
-### 3.2.1. Caso práctico de autorización
 
 Se crea el usuario en el clúster:
 ~~~
@@ -240,6 +169,34 @@ users:
     client-key-data: REDACTED
 ~~~
 
+### 3.1.2. Tokens
+#### 3.1.2.1. Caso práctico de autenticación con tokens
+
+
+
+## 3.2. Autorización
+Para ejecutar comandos con un usuario concreto se utilizan los **contextos**. Para ver los contextos existentes se utiliza la siguiente orden:
+~~~
+kubectl config get-contexts  
+~~~
+
+Para crear un contexto:
+~~~
+kubectl config set-context <contexto> --cluster=<nombre_cluster> --user=<usuario>
+~~~
+
+Para cambiar el contexto:
+~~~
+kubectl config use-context <contexto>
+~~~
+
+Y para ver el contexto que se está usando:
+~~~
+kubectl config current-context
+~~~
+
+### 3.2.1. Caso práctico de autorización
+
 A continuación, se va a crear un contexto para el nodo y usuario cliente:
 ~~~
 debian@kubemaster:~$ kubectl config set-context kubecliente --cluster=kubernetes --user=kubecliente
@@ -252,6 +209,41 @@ debian@kubemaster:~/RBAC$ kubectl config get-contexts
 CURRENT   NAME                          CLUSTER      AUTHINFO           NAMESPACE
           kubecliente                   kubernetes   kubecliente        
 *         kubernetes-admin@kubernetes   kubernetes   kubernetes-admin 
+~~~
+
+Se instala kubectl en el nodo cliente y desde el master se dan permiso de lectura al fichero `/etc/kubernetes/admin.conf`:
+~~~
+debian@kubemaster:~$ sudo chmod 644 /etc/kubernetes/admin.conf
+~~~
+
+Desde el nodo cliente se va copiar el fichero de configuración del master:
+~~~
+debian@kubecliente:~$ sftp debian@${IP_MASTER}
+The authenticity of host '172.22.200.133 (172.22.200.133)' can't be established.
+ECDSA key fingerprint is SHA256:Y+knQJVp5El7mt7x/P3yI74ZhoAi2AF9fwIDsMEbhtU.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added '172.22.200.133' (ECDSA) to the list of known hosts.
+debian@172.22.200.133's password: 
+Connected to debian@172.22.200.133.
+sftp> get /etc/kubernetes/admin.conf
+Fetching /etc/kubernetes/admin.conf to admin.conf
+/etc/kubernetes/admin.conf                       100% 5444     1.4MB/s   00:00    
+sftp> exit
+~~~
+
+Y se crea el directorio `.kube` para alojar el fichero de configuración:
+~~~
+debian@kubecliente:~$ mkdir .kube
+debian@kubecliente:~$ mv admin.conf ~/.kube/mycluster.conf
+debian@kubecliente:~$ sed -i -e "s#server: https://.*:6443#server: https://${IP_MASTER}:6443#g" ~/.kube/mycluster.conf
+debian@kubecliente:~$ export KUBECONFIG=~/.kube/mycluster.conf
+~~~
+
+Finalmente se comprueba que funciona correctamente:
+~~~
+debian@kubecliente:~$ kubectl cluster-info
+Kubernetes master is running at https://172.22.200.133:6443
+KubeDNS is running at https://172.22.200.133:6443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
 ~~~
 
 Se cambia el contexto:
@@ -676,7 +668,7 @@ spec:
 
 Este despliegue utiliza dos volúmenes persistentes que han sido creados con anterioridad por kubemaster. Para la creación de estos volúmenes se ha seguido una [guía propia](https://github.com/PalomaR88/Volumenes-persistentes-kubernetes/blob/master/Practica.md).
 
-Además, se va a suminstrar almacenamiento dinámico desde el administrador al cliente para que pueda crear llamadas a los volúmnes asignados libremente. Para ello se crean dos **StorageClass**. Uno por defecto, el usuario no podrá hacer uso de los volúmenes mascardo con este tipo. Y el storegeclass que más tarde se le asignará al usuario, vol-kubecliente. El fichero de configuración es el siguiente:
+Además, se va a suminstrar almacenamiento dinámico desde el administrador al cliente para que pueda crear llamadas a los volúmenes asignados libremente. Para ello se crean dos **StorageClass**. Uno por defecto, el usuario no podrá hacer uso de los volúmenes mascardo con este tipo. Y el storegeclass que más tarde se le asignará al usuario, vol-kubecliente. El fichero de configuración es el siguiente:
 ~~~ 
 kind: StorageClass
 apiVersion: storage.k8s.io/v1beta1
@@ -703,7 +695,7 @@ storageclass.storage.k8s.io/default patched
 
 Si se quiere cambiar de clase por defecto, en el caso de existir ya una, se debe modificar `true` por `false`.
 
-Finalmente, el resultado es que hay dos storageclass y uno de ellos por defecto y el que se le asignará al usuario:
+Finalmente, el resultado es que hay dos storageclass, uno de ellos por defecto y el que se le asignará al usuario:
 ~~~
 debian@kubemaster:~/RBAC$ kubectl get storageclass
 NAME                PROVISIONER            RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
@@ -944,10 +936,10 @@ spec:
                   name: mariadb-secret
                   key: dbrootpassword
           volumeMounts: 
-            - name: volumen7
+            - name: vol1
               mountPath: /var/lib/mysql
       volumes:
-        - name: volumen7
+        - name: vol1
           persistentVolumeClaim:
             claimName: mariadb-pvc
 ~~~
@@ -1000,10 +992,10 @@ spec:
                   name: mariadb-secret
                   key: dbname
           volumeMounts:
-            - name: volumen8
+            - name: vol2
               mountPath: /var/www/html
       volumes:
-        - name: volumen8
+        - name: vol2
           persistentVolumeClaim:
             claimName: clientewp-pvc
 ~~~
@@ -1177,7 +1169,7 @@ Una práctica muy interesante sería la realización de un script para crear usu
 
 # 6. Conclusiones
 
-Con la información recopilada en este docuemnto se puede concluir que la característica principal de la administración de usuarios y permisos en Kubernetes es la versatilidad que ofrece. Pudiendo desgranar las opciones según las necesidades. Siendo, además, muy sencillo de estandarizar. 
+Con la información recopilada en este documento se puede concluir que la característica principal de la administración de usuarios y permisos en Kubernetes es la versatilidad que ofrece. Pudiendo desgranar las opciones según las necesidades. Siendo, además, muy sencillo de estandarizar. 
 
 Como se dijo en la introducción, este es un trabajo fundamental para un administrador de sistemas, pero se ha observado que no sólo es necesario el conocimiento sobre usuarios y permisos, sino que para realizar una correccta gestión se debe tener unos conocimientos mínimos sobre el funcionamiento de la API y los objetos del sistema. 
 

@@ -19,7 +19,7 @@
 #### [3.3.3. Caso práctico de autorización de RBAC y Quotas](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes/blob/master/Proyecto.md#2331-caso-pr%C3%A1ctico)
 
 ## [4. Herramientas auxiliares](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes/blob/master/Proyecto.md#3-herramientas-auxiliares)
-### [4.1. Eslastickube](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes/blob/master/Proyecto.md#31-elastickube)
+### [4.1. Elastickube](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes/blob/master/Proyecto.md#31-elastickube)
 ### [4.2. Klum](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes/blob/master/Proyecto.md#32-klum)
 ### [4.3. Rakkess](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes/blob/master/Proyecto.md#33-rakkess)
 ### [4.4. Kubectl-who-can](https://github.com/PalomaR88/Gestion_de_usuarios_y_reglas_de_acceso_en_Kubernetes/blob/master/Proyecto.md#34-kubect-who-can)
