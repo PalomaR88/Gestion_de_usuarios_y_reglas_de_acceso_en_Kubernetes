@@ -1,7 +1,7 @@
 # Gestión de usuarios y reglas de acceso en Kubernetes
 # 1. Introducción
 
-Kubernetes es el orquestador de contenedores más utilizado en la actualidad. Una de las claves de su éxito es la configuración que ofrece. Y un punto fundamental para cualquier administrador de sitemas pasa por saber administrar los usuarios que utilizarán nuestro cluster. 
+Kubernetes es el orquestador de contenedores más utilizado en la actualidad. Una de las claves de su éxito es la configuración que ofrece. Y un punto fundamental para cualquier administrador de sistemas pasa por saber administrar los usuarios que utilizarán nuestro cluster. 
 
 El presente proyecto integrado trata la gestión de los usuarios en Kubernetes y la aplicación de permisos a los mismo, para poder administrar correctamente un cluster.
 
@@ -44,8 +44,8 @@ Los puertos necesarios que vamos a abrir para este proyecto son los siguientes:
 # 3. Control de acceso a la API
 Para que los usuarios puedan ser autorizados para el acceso a la API se pasa por 3 etapas: 
 
-1. Autenticación
-2. Autorización
+1. Autenticación.
+2. Autorización.
 3. Control de admisión.
 
 Los clúster de Kubernetes tienen un certificado, que suele estar autorfimado, y se incluyen en `$USER/.kube/config`. Este cerficado se escribe automáticamente cuando se crea un clúster y se puede compartir con otros usuarios.
